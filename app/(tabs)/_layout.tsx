@@ -1,21 +1,21 @@
-// template
 import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
 import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
 import { BlurView } from "expo-blur";
-import { SymbolView } from "expo-symbols";
 import { Platform, StyleSheet, useColorScheme } from "react-native";
 import React from "react";
+import { Colors } from "@/constants/colors";
 
-import Colors from "@/constants/colors";
-
-//IMPORTANT: iOS 26 Exists, feel free to use NativeTabs for native tabs with liquid glass support.
 function NativeTabLayout() {
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: "house", selected: "house.fill" }} />
-        <Label>Home</Label>
+        <Icon sf={{ default: "waveform", selected: "waveform" }} />
+        <Label>Library</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="record">
+        <Icon sf={{ default: "mic.circle", selected: "mic.circle.fill" }} />
+        <Label>Record</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -24,39 +24,58 @@ function NativeTabLayout() {
 function ClassicTabLayout() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const theme = isDark ? Colors.dark : Colors.light;
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors.light.tint,
-        tabBarInactiveTintColor: Colors.light.tabIconDefault,
-        headerShown: true,
+        tabBarActiveTintColor: Colors.coral,
+        tabBarInactiveTintColor: theme.tabIconDefault,
+        headerShown: false,
         tabBarStyle: {
           position: "absolute",
           backgroundColor: Platform.select({
             ios: "transparent",
-            android: isDark ? "#000" : "#fff",
+            android: isDark ? Colors.dark.card : "#fff",
+            web: isDark ? Colors.dark.card : "#fff",
           }),
-          borderTopWidth: 0,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: theme.border,
           elevation: 0,
+          height: Platform.OS === "web" ? 84 : undefined,
         },
         tabBarBackground: () =>
           Platform.OS === "ios" ? (
             <BlurView
-              intensity={100}
+              intensity={80}
               tint={isDark ? "dark" : "light"}
               style={StyleSheet.absoluteFill}
             />
           ) : null,
+        tabBarLabelStyle: {
+          fontFamily: "DMSans_500Medium",
+          fontSize: 11,
+        },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
-          tabBarIcon: ({ color }) => (
-            <SymbolView name="house" tintColor={color} size={24} />
-          ),
+          title: "Library",
+          tabBarIcon: ({ color, size }) => {
+            const { Ionicons } = require("@expo/vector-icons");
+            return <Ionicons name="library" size={size} color={color} />;
+          },
+        }}
+      />
+      <Tabs.Screen
+        name="record"
+        options={{
+          title: "Record",
+          tabBarIcon: ({ color, size }) => {
+            const { Ionicons } = require("@expo/vector-icons");
+            return <Ionicons name="mic-circle" size={size} color={color} />;
+          },
         }}
       />
     </Tabs>
