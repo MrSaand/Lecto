@@ -1,0 +1,63 @@
+🎙️ The App: "Lecto"
+
+The Vibe: Professional, academic, yet "vibrant minimalist."
+Design Specs: * Colors: Deep Indigo (#3F51B5) for the primary UI, with vibrant highlights in Coral (#FF7043) and Mint (#4DB6AC).
+
+UI: Uses "Glassmorphism" for the player controls and clean cards for the recording library.
+
+Copy and Paste this into Replit Agent:
+
+The Prompt:
+"Build a professional AI Voice-to-Notes app called 'Lecto' using Next.js, Tailwind CSS, and PostgreSQL.
+
+Core Functionalities:
+
+Recording Engine (Background Enabled):
+
+Create a main recording screen with a large, vibrant record button.
+
+Menu Controls: Once recording starts, show 'Pause', 'Resume', and 'Stop' buttons.
+
+Requirement: Implement a 'Service Worker' to ensure the Web Audio API continues recording even if the phone screen is turned off or the browser is minimized.
+
+AI Processing Pipeline:
+
+Once a recording is stopped, send the audio to a Speech-to-Text API (like OpenAI Whisper) with Speaker Diarization enabled to create speaker labels (e.g., 'Speaker 1', 'Speaker 2').
+
+Generate three distinct tabs for each recording:
+
+Summary: An AI-generated bulleted overview of key points.
+
+Transcript: The full text with timestamps and speaker labels.
+
+Chat: An AI-assistant interface where users can ask questions specifically about that recording's content.
+
+The Library (Dashboard):
+
+A searchable home screen showing all past recordings with titles, dates, and durations.
+
+Store all metadata (transcripts and summaries) in PostgreSQL for fast retrieval.
+
+Export & Sharing:
+
+Add a 'Share' button that generates a clean PDF of either the Summary or the full Transcript.
+
+Design & Style:
+
+Aesthetic: 'Vibrant Professional.' Background: Light Grey (#F5F7FA). Use Deep Indigo for headers and Coral for the record button.
+
+Mobile-First: All buttons must be large and touch-friendly for students in a lecture hall.
+
+Technical Logic:
+
+Use Replit Secrets for all API keys.
+
+Configure the app for 'Always On' to handle long audio uploads and background processing without timing out."
+
+🛠️ Why this works for a student side business:
+
+Speaker Labels (Diarization): This is the feature that separates "toys" from "tools." In a lecture, it helps distinguish between the Professor’s lecture and a student asking a question.
+
+PDF Export: This makes the app immediately useful for TKE meetings or Business Econ study groups. You can record the meeting and immediately email the PDF "minutes" to everyone.
+
+The "Always On" Advantage: Because you are on Replit Core, your "Transcription Worker" can take 5–10 minutes to process a long lecture in the background without the app crashing or sleeping.
