@@ -153,9 +153,9 @@ Answer questions specifically about this content. Be helpful, concise, and accur
       const { recording, folderName, recordings } = req.body;
 
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const PdfPrinter = require("pdfmake");
+      const pdfmake = require("pdfmake");
 
-      const fonts = {
+      pdfmake.fonts = {
         Helvetica: {
           normal: "Helvetica",
           bold: "Helvetica-Bold",
@@ -289,14 +289,12 @@ Answer questions specifically about this content. Be helpful, concise, and accur
         content: contentBlocks,
       };
 
-      const printer = new PdfPrinter(fonts);
-      const pdfDoc = printer.createPdfKitDocument(docDefinition);
+      const pdfDoc = pdfmake.createPdf(docDefinition);
+      const buffer = await pdfDoc.getBuffer();
 
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(docTitle)}.pdf"`);
-
-      pdfDoc.pipe(res);
-      pdfDoc.end();
+      res.send(Buffer.from(buffer));
     } catch (error: any) {
       console.error("PDF error:", error);
       res.status(500).json({ error: error.message || "PDF generation failed" });
