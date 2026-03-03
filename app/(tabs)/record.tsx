@@ -298,7 +298,7 @@ export default function RecordScreen() {
 
       const newRecording = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        title: data.title || "Untitled Recording",
+        title: data.title || "Untitled Lecture",
         date: new Date().toISOString(),
         duration: elapsedRef.current,
         summary: data.summary || [],
@@ -366,7 +366,7 @@ export default function RecordScreen() {
       >
         <Animated.View entering={FadeIn.duration(400)} style={styles.headingBlock}>
           <Text style={[styles.header, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
-            {isProcessing ? "Processing..." : isActive ? "Recording" : isPaused ? "Paused" : "New Recording"}
+            {isProcessing ? "Processing..." : isActive ? "Lecturing" : isPaused ? "Paused" : "New Lecture"}
           </Text>
           <Text style={[styles.subheader, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
             {isProcessing
@@ -375,7 +375,7 @@ export default function RecordScreen() {
               ? "Speak clearly — Lecto is capturing every word"
               : isPaused
               ? "Tap to resume or stop when finished"
-              : "Tap the button below to start recording"}
+              : "Tap the button below to start a new lecture"}
           </Text>
         </Animated.View>
 

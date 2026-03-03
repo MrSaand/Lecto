@@ -18,9 +18,9 @@ import Animated, { FadeIn, FadeInDown, SlideInDown } from "react-native-reanimat
 import * as Haptics from "expo-haptics";
 
 const FEATURES = [
-  { icon: "mic-outline" as const, label: "Unlimited recordings" },
+  { icon: "mic-outline" as const, label: "Unlimited lectures" },
   { icon: "sparkles" as const, label: "AI transcription & smart summaries" },
-  { icon: "chatbubbles-outline" as const, label: "Chat with your recordings" },
+  { icon: "chatbubbles-outline" as const, label: "Chat with your lectures" },
   { icon: "folder-open-outline" as const, label: "Folder organization" },
   { icon: "share-outline" as const, label: "Share & export notes" },
   { icon: "language-outline" as const, label: "Multi-language support" },
@@ -131,7 +131,7 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
               </Text>
               <Text style={[styles.heroSubtitle, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
                 {fromLimit
-                  ? "You've reached your 2 free recordings. Subscribe to continue."
+                  ? "You've reached your 2 free lectures. Subscribe to continue."
                   : "Unlock the full power of AI note-taking"}
               </Text>
             </Animated.View>

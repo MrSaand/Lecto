@@ -183,7 +183,7 @@ export default function DetailScreen() {
     return (
       <View style={[styles.container, styles.center, { backgroundColor: theme.background }]}>
         <Ionicons name="alert-circle-outline" size={48} color={theme.textTertiary} />
-        <Text style={[styles.notFound, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>Recording not found</Text>
+        <Text style={[styles.notFound, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>Lecture not found</Text>
         <Pressable onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: theme.card }]}>
           <Text style={{ color: Colors.indigo, fontFamily: "DMSans_500Medium" }}>Go Back</Text>
         </Pressable>
@@ -370,7 +370,7 @@ export default function DetailScreen() {
                   <View style={[styles.chatEmptyIcon, { backgroundColor: Colors.indigo + "16" }]}>
                     <Ionicons name="chatbubbles-outline" size={32} color={Colors.indigo} />
                   </View>
-                  <Text style={[styles.chatEmptyTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>Ask about your recording</Text>
+                  <Text style={[styles.chatEmptyTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>Ask about your lecture</Text>
                   <Text style={[styles.chatEmptyText, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
                     "What were the main action items?"{"\n"}"Summarize Speaker 2's points"{"\n"}"What decisions were made?"
                   </Text>
@@ -400,7 +400,7 @@ export default function DetailScreen() {
             <TextInput
               ref={inputRef}
               style={[styles.chatInput, { backgroundColor: theme.card, color: theme.text, borderColor: theme.border, fontFamily: "DMSans_400Regular" }]}
-              placeholder="Ask about this recording..."
+              placeholder="Ask about this lecture..."
               placeholderTextColor={theme.textTertiary}
               value={chatInput}
               onChangeText={setChatInput}
@@ -431,7 +431,7 @@ export default function DetailScreen() {
                 <View style={[styles.renameHandleBar, { backgroundColor: theme.border }]} />
               </View>
               <View style={styles.renameHeader}>
-                <Text style={[styles.renameTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>Rename Recording</Text>
+                <Text style={[styles.renameTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>Rename Lecture</Text>
                 <Pressable onPress={() => setShowRename(false)} style={styles.renameClose}>
                   <Ionicons name="close" size={22} color={theme.textSecondary} />
                 </Pressable>
@@ -496,13 +496,13 @@ export default function DetailScreen() {
                   <Feather name="trash-2" size={28} color={Colors.coral} />
                 </View>
                 <Text style={[styles.deleteTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
-                  Delete Recording?
+                  Delete Lecture?
                 </Text>
                 <Text style={[styles.deleteRecordingName, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
                   {recording?.title}
                 </Text>
                 <Text style={[styles.deleteWarning, { color: theme.textTertiary, fontFamily: "DMSans_400Regular" }]}>
-                  This recording and all its notes will be permanently deleted. This cannot be undone.
+                  This lecture and all its notes will be permanently deleted. This cannot be undone.
                 </Text>
               </View>
               <View style={styles.deleteButtons}>

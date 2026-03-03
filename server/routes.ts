@@ -169,6 +169,7 @@ Answer questions specifically about this content. Be helpful, concise, and accur
       const MINT = "#2D9E96";
       const TEXT = "#1A1A2E";
       const MUTED = "#666680";
+      const GENERATED = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
       function formatDur(s: number) {
         const m = Math.floor(s / 60);
@@ -176,77 +177,80 @@ Answer questions specifically about this content. Be helpful, concise, and accur
         return `${m}:${sec.toString().padStart(2, "0")}`;
       }
 
+      function sectionHeader(label: string, color: string, bg: string): any {
+        return {
+          table: {
+            widths: ["*"],
+            body: [[{
+              text: label,
+              fontSize: 9,
+              bold: true,
+              color,
+              fillColor: bg,
+              border: [false, false, false, false],
+              margin: [12, 8, 12, 8],
+            }]],
+          },
+          layout: "noBorders",
+          margin: [0, 0, 0, 10],
+        };
+      }
+
       function recBlock(rec: any, folder?: string): any[] {
         const blocks: any[] = [];
 
         if (folder) {
-          blocks.push({ text: `📁 ${folder}`, fontSize: 9, color: MUTED, margin: [0, 0, 0, 4] });
+          blocks.push({ text: `Folder: ${folder}`, fontSize: 9, color: MUTED, margin: [0, 0, 0, 6] });
         }
 
-        blocks.push({ text: rec.title, fontSize: 18, bold: true, color: TEXT, margin: [0, 0, 0, 2] });
+        blocks.push({ text: rec.title, fontSize: 20, bold: true, color: TEXT, margin: [0, 0, 0, 3] });
 
-        const date = new Date(rec.date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
-        blocks.push({ text: `${date}  ·  ${formatDur(rec.duration)}`, fontSize: 11, color: MUTED, margin: [0, 0, 0, 12] });
+        const dateStr = new Date(rec.date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+        blocks.push({ text: `${dateStr}  ·  ${formatDur(rec.duration)}`, fontSize: 11, color: MUTED, margin: [0, 0, 0, 12] });
 
         if (rec.keyTopics && rec.keyTopics.length > 0) {
-          blocks.push({
-            text: rec.keyTopics.join("   ·   "),
-            fontSize: 10,
-            color: INDIGO,
-            margin: [0, 0, 0, 14],
-          });
+          blocks.push({ text: rec.keyTopics.join("  ·  "), fontSize: 10, color: INDIGO, margin: [0, 0, 0, 16] });
         }
 
         // Summary
-        blocks.push({
-          table: { widths: ["*"], body: [[{ text: "✦  SUMMARY", fontSize: 9, bold: true, color: INDIGO, fillColor: "#EEF0FB", margin: [10, 7, 10, 7] }]] },
-          layout: "noBorders",
-          margin: [0, 0, 0, 8],
-        });
+        blocks.push(sectionHeader("+  SUMMARY", INDIGO, "#EEF0FB"));
         if (rec.summary && rec.summary.length > 0) {
-          blocks.push({
-            ul: rec.summary,
-            fontSize: 12,
-            color: TEXT,
-            margin: [4, 0, 0, 14],
-          });
+          blocks.push({ ul: rec.summary, fontSize: 12, color: TEXT, margin: [4, 0, 0, 16] });
         } else {
-          blocks.push({ text: "No summary available.", italics: true, color: MUTED, fontSize: 11, margin: [4, 0, 0, 14] });
+          blocks.push({ text: "No summary available.", italics: true, color: MUTED, fontSize: 11, margin: [4, 0, 0, 16] });
         }
 
         // Action Items
-        blocks.push({
-          table: { widths: ["*"], body: [[{ text: "→  ACTION ITEMS", fontSize: 9, bold: true, color: CORAL, fillColor: "#FFF0EC", margin: [10, 7, 10, 7] }]] },
-          layout: "noBorders",
-          margin: [0, 0, 0, 8],
-        });
+        blocks.push(sectionHeader(">  ACTION ITEMS", CORAL, "#FFF0EC"));
         if (rec.actionItems && rec.actionItems.length > 0) {
           const rows = rec.actionItems.map((a: any) => [
-            { text: a.speaker, fontSize: 10, bold: true, color: CORAL, margin: [0, 2, 0, 2] },
-            { text: a.task, fontSize: 11, color: TEXT, margin: [0, 2, 0, 2] },
+            { text: a.speaker, fontSize: 10, bold: true, color: CORAL, margin: [0, 3, 8, 3] },
+            { text: a.task, fontSize: 11, color: TEXT, margin: [0, 3, 0, 3] },
           ]);
           blocks.push({
             table: { widths: ["auto", "*"], body: rows },
             layout: "lightHorizontalLines",
-            margin: [0, 0, 0, 14],
+            margin: [0, 0, 0, 16],
           });
         } else {
-          blocks.push({ text: "No action items.", italics: true, color: MUTED, fontSize: 11, margin: [4, 0, 0, 14] });
+          blocks.push({ text: "No action items.", italics: true, color: MUTED, fontSize: 11, margin: [4, 0, 0, 16] });
         }
 
         // Transcript
-        blocks.push({
-          table: { widths: ["*"], body: [[{ text: "◈  TRANSCRIPT", fontSize: 9, bold: true, color: MINT, fillColor: "#E8F7F6", margin: [10, 7, 10, 7] }]] },
-          layout: "noBorders",
-          margin: [0, 0, 0, 8],
-        });
+        blocks.push(sectionHeader("*  TRANSCRIPT", MINT, "#E8F7F6"));
         if (rec.transcript && rec.transcript.length > 0) {
           const tRows = rec.transcript.map((t: any) => [
-            { text: `${t.speaker}\n${t.timestamp}`, fontSize: 9, bold: true, color: INDIGO, margin: [0, 3, 8, 3] },
-            { text: t.text, fontSize: 11, color: TEXT, margin: [0, 3, 0, 3] },
+            {
+              stack: [
+                { text: t.speaker, fontSize: 10, bold: true, color: INDIGO },
+                { text: t.timestamp, fontSize: 9, color: MUTED, margin: [0, 2, 0, 0] },
+              ],
+              margin: [0, 4, 10, 4],
+            },
+            { text: t.text, fontSize: 11, color: TEXT, margin: [0, 4, 0, 4] },
           ]);
           blocks.push({
-            table: { widths: [64, "*"], body: tRows },
+            table: { widths: [70, "*"], body: tRows },
             layout: "lightHorizontalLines",
             margin: [0, 0, 0, 4],
           });
@@ -264,28 +268,33 @@ Answer questions specifically about this content. Be helpful, concise, and accur
       allRecordings.forEach((rec: any, i: number) => {
         contentBlocks.push(...recBlock(rec, recordings ? folderName : undefined));
         if (i < allRecordings.length - 1) {
-          contentBlocks.push({ canvas: [{ type: "line", x1: 0, y1: 0, x2: 495, y2: 0, lineWidth: 1, lineColor: "#E8E8F0" }], margin: [0, 24, 0, 24] });
+          contentBlocks.push({ canvas: [{ type: "line", x1: 0, y1: 0, x2: 495, y2: 0, lineWidth: 1, lineColor: "#E8E8F0" }], margin: [0, 28, 0, 28] });
         }
       });
 
       const docDefinition = {
         defaultStyle: { font: "Helvetica" },
-        pageMargins: [50, 80, 50, 60],
-        header: {
-          columns: [
-            { text: "LECTO", fontSize: 10, bold: true, color: "#ffffff", margin: [50, 20, 0, 0] },
-            { text: docTitle, fontSize: 10, color: "rgba(255,255,255,0.8)", alignment: "right", margin: [0, 20, 50, 0] },
-          ],
-          fillColor: INDIGO,
-          margin: [0, 0, 0, 0],
-        },
-        footer: (currentPage: number, pageCount: number) => ({
-          text: `${currentPage} / ${pageCount}   ·   Generated ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`,
-          alignment: "center",
-          fontSize: 9,
-          color: MUTED,
-          margin: [0, 20, 0, 0],
-        }),
+        pageMargins: [50, 76, 50, 58],
+        header: (currentPage: number, pageCount: number, pageSize: { width: number; height: number }) => [
+          { canvas: [{ type: "rect", x: 0, y: 0, w: pageSize.width, h: 65, color: INDIGO }] },
+          {
+            absolutePosition: { x: 50, y: 14 },
+            stack: [
+              { text: "LECTO", fontSize: 8, bold: true, color: "white", characterSpacing: 3 },
+              { text: docTitle, fontSize: 14, bold: true, color: "#ffffff", margin: [0, 5, 0, 0] },
+            ],
+          },
+        ],
+        footer: (currentPage: number, pageCount: number, pageSize: { width: number; height: number }) => [
+          { canvas: [{ type: "line", x1: 50, y1: 0, x2: pageSize.width - 50, y2: 0, lineWidth: 1, lineColor: "#E8E8F0" }] },
+          {
+            columns: [
+              { text: "LECTO", fontSize: 10, bold: true, color: INDIGO, characterSpacing: 1 },
+              { text: `Generated ${GENERATED}`, fontSize: 9, color: MUTED, alignment: "right" },
+            ],
+            margin: [50, 8, 50, 0],
+          },
+        ],
         content: contentBlocks,
       };
 

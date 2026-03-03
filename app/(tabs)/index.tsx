@@ -327,7 +327,7 @@ function RenameModal({
             <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
             <View style={styles.sheetHeader}>
               <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
-                Rename {target?.type === "folder" ? "Folder" : "Recording"}
+                Rename {target?.type === "folder" ? "Folder" : "Lecture"}
               </Text>
               <Pressable onPress={onCancel} style={styles.sheetClose}>
                 <Ionicons name="close" size={22} color={theme.textSecondary} />
@@ -463,15 +463,15 @@ function DeleteConfirmModal({
                 <Feather name="trash-2" size={28} color={Colors.coral} />
               </View>
               <Text style={[styles.deleteTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
-                Delete {isFolder ? "Folder" : "Recording"}?
+                Delete {isFolder ? "Folder" : "Lecture"}?
               </Text>
               <Text style={[styles.deleteSubtitle, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
                 {target?.name}
               </Text>
               <Text style={[styles.deleteWarning, { color: theme.textTertiary, fontFamily: "DMSans_400Regular" }]}>
                 {isFolder
-                  ? "The folder will be deleted. Any recordings inside will be moved to the parent folder."
-                  : "This recording and its notes will be permanently deleted. This cannot be undone."}
+                  ? "The folder will be deleted. Any lectures inside will be moved to the parent folder."
+                  : "This lecture and its notes will be permanently deleted. This cannot be undone."}
               </Text>
             </View>
             <View style={styles.deleteActions}>
@@ -527,8 +527,8 @@ function SettingsModal({ visible, onClose, theme }: { visible: boolean; onClose:
                   </Text>
                   <Text style={[styles.subDesc, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
                     {isSubscribed
-                      ? "Unlimited recordings & all features unlocked"
-                      : `${recordingCount}/${FREE_RECORDING_LIMIT} free recordings used · Tap to unlock`}
+                      ? "Unlimited lectures & all features unlocked"
+                      : `${recordingCount}/${FREE_RECORDING_LIMIT} free lectures used · Tap to unlock`}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={isSubscribed ? Colors.indigo : Colors.coral} />
@@ -756,7 +756,7 @@ export default function LibraryScreen() {
             <View style={styles.headerTitleBlock}>
               <Text style={[styles.appName, { color: Colors.indigo, fontFamily: "DMSans_700Bold" }]}>Lecto</Text>
               <Text style={[styles.subtitle, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
-                {recordings.length} {recordings.length === 1 ? "recording" : "recordings"}
+                {recordings.length} {recordings.length === 1 ? "lecture" : "lectures"}
               </Text>
             </View>
           )}
@@ -827,7 +827,7 @@ export default function LibraryScreen() {
           <Feather name="search" size={16} color={theme.textTertiary} />
           <TextInput
             style={[styles.searchInput, { color: theme.text, fontFamily: "DMSans_400Regular" }]}
-            placeholder="Search recordings..."
+            placeholder="Search lectures..."
             placeholderTextColor={theme.textTertiary}
             value={search}
             onChangeText={setSearch}
