@@ -103,13 +103,24 @@ export default function RecordScreen() {
   const startWebRecording = async () => {
     try {
       const stream = await (navigator as any).mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new (window as any).MediaRecorder(stream);
+
+      // Pick the best supported MIME type that OpenAI Whisper accepts
+      const preferredTypes = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/ogg;codecs=opus",
+        "audio/mp4",
+      ];
+      const MR = (window as any).MediaRecorder;
+      const mimeType = preferredTypes.find((t) => MR.isTypeSupported(t)) || "";
+
+      const mediaRecorder = mimeType ? new MR(stream, { mimeType }) : new MR(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
       mediaRecorder.ondataavailable = (e: any) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+        if (e.data && e.data.size > 0) audioChunksRef.current.push(e.data);
       };
-      mediaRecorder.start(100);
+      mediaRecorder.start(250); // collect every 250ms for more reliable chunks
       elapsedRef.current = 0;
       setElapsed(0);
       setRecordState("recording");
@@ -138,19 +149,31 @@ export default function RecordScreen() {
     }
   };
 
-  const stopWebRecording = (): Promise<string> => {
+  const stopWebRecording = (): Promise<{ base64: string; filename: string }> => {
     return new Promise((resolve, reject) => {
       const mr = mediaRecorderRef.current;
       if (!mr) return reject(new Error("No recorder"));
+
+      // Request final chunk before stopping
+      if (mr.state === "recording" || mr.state === "paused") {
+        try { mr.requestData(); } catch {}
+      }
+
       mr.onstop = async () => {
         try {
           mr.stream.getTracks().forEach((t: any) => t.stop());
-          const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+
+          const mimeType = mr.mimeType || "audio/webm";
+          const ext = mimeType.includes("ogg") ? "ogg" : mimeType.includes("mp4") ? "mp4" : "webm";
+
+          const blob = new Blob(audioChunksRef.current, { type: mimeType });
+          if (blob.size === 0) return reject(new Error("Recording is empty — please record again"));
+
           const reader = new FileReader();
           reader.onload = () => {
             const dataUrl = reader.result as string;
             const base64 = dataUrl.split(",")[1];
-            resolve(base64);
+            resolve({ base64, filename: `recording.${ext}` });
           };
           reader.onerror = () => reject(new Error("Failed to read audio"));
           reader.readAsDataURL(blob);
@@ -237,8 +260,9 @@ export default function RecordScreen() {
 
       if (Platform.OS === "web") {
         setStatusMsg("Stopping recording...");
-        base64 = await stopWebRecording();
-        filename = "recording.webm";
+        const result = await stopWebRecording();
+        base64 = result.base64;
+        filename = result.filename;
       } else {
         setStatusMsg("Stopping recording...");
         const result = await stopNativeRecording();
