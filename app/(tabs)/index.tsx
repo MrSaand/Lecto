@@ -10,8 +10,8 @@ import {
   Platform,
   Modal,
   ScrollView,
-  Share,
 } from "react-native";
+import { shareRecordingAsPdf, shareFolderAsPdf } from "@/lib/pdf";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons, Feather } from "@expo/vector-icons";
@@ -696,25 +696,20 @@ export default function LibraryScreen() {
   const handleOptionsShare = async () => {
     if (!optionsTarget) return;
     setOptionsTarget(null);
-    if (optionsTarget.type === "recording") {
-      const rec = recordings.find((r) => r.id === optionsTarget.id);
-      if (!rec) return;
-      const content = `# ${rec.title}\n${formatDate(rec.date)} · ${formatDuration(rec.duration)}\n\n## Summary\n${rec.summary.map((s) => `• ${s}`).join("\n")}\n\n## Action Items\n${rec.actionItems.map((a) => `[${a.speaker}] ${a.task}`).join("\n")}\n\n## Transcript\n${rec.transcript.map((t) => `[${t.timestamp}] ${t.speaker}: ${t.text}`).join("\n\n")}`;
-      await Share.share({ message: content, title: rec.title });
-    } else {
-      await shareFolderContents(optionsTarget.id, optionsTarget.name);
+    try {
+      if (optionsTarget.type === "recording") {
+        const rec = recordings.find((r) => r.id === optionsTarget.id);
+        if (!rec) return;
+        await shareRecordingAsPdf(rec);
+      } else {
+        const recsInFolder = getAllRecordingsInFolder(optionsTarget.id);
+        await shareFolderAsPdf(optionsTarget.name, recsInFolder);
+      }
+    } catch (e: any) {
+      if (!e?.message?.toLowerCase().includes("cancel")) {
+        console.error("Share error:", e);
+      }
     }
-  };
-
-  const shareFolderContents = async (folderId: string, folderName: string) => {
-    const recsInFolder = getAllRecordingsInFolder(folderId);
-    if (recsInFolder.length === 0) {
-      return;
-    }
-    const content = `# ${folderName}\n\n` + recsInFolder.map((rec) =>
-      `## ${rec.title}\n${formatDate(rec.date)} · ${formatDuration(rec.duration)}\n\n### Summary\n${rec.summary.map((s) => `• ${s}`).join("\n")}\n\n### Action Items\n${rec.actionItems.map((a) => `[${a.speaker}] ${a.task}`).join("\n")}`
-    ).join("\n\n---\n\n");
-    await Share.share({ message: content, title: folderName });
   };
 
   function getAllRecordingsInFolder(folderId: string): Recording[] {

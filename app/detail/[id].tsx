@@ -7,11 +7,11 @@ import {
   FlatList,
   TextInput,
   ScrollView,
-  Share,
   Modal,
   useColorScheme,
   Platform,
 } from "react-native";
+import { shareRecordingAsPdf } from "@/lib/pdf";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import { Ionicons, Feather } from "@expo/vector-icons";
@@ -93,16 +93,12 @@ export default function DetailScreen() {
 
   const handleShare = async () => {
     if (!recording) return;
-    const summaryText = recording.summary.map((s, i) => `• ${s}`).join("\n");
-    const actionText = recording.actionItems.map((a) => `[${a.speaker}] ${a.task}`).join("\n");
-    const transcriptText = recording.transcript.map((t) => `[${t.timestamp}] ${t.speaker}: ${t.text}`).join("\n\n");
-
-    const content = `# ${recording.title}\n${formatDate(recording.date)} · ${formatTime(recording.duration)}\n\n## Summary\n${summaryText}\n\n## Action Items\n${actionText}\n\n## Transcript\n${transcriptText}`;
-
     try {
-      await Share.share({ message: content, title: recording.title });
-    } catch (e) {
-      console.error("Share error:", e);
+      await shareRecordingAsPdf(recording);
+    } catch (e: any) {
+      if (!e?.message?.toLowerCase().includes("cancel")) {
+        console.error("Share error:", e);
+      }
     }
   };
 
