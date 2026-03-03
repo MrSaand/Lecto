@@ -303,6 +303,7 @@ export default function RecordScreen() {
         transcript: data.transcript || [],
         rawTranscript: data.rawTranscript || "",
         keyTopics: data.keyTopics || [],
+        folderId: null,
       };
 
       await addRecording(newRecording);

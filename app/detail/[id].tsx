@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
-import { useRecordings, Recording } from "@/contexts/RecordingsContext";
+import { useRecordings } from "@/contexts/RecordingsContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import Animated, { FadeIn, FadeInDown, FadeInRight, SlideInDown } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
@@ -62,7 +62,7 @@ export default function DetailScreen() {
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { recordings, deleteRecording } = useRecordings();
+  const { recordings, deleteRecording, renameRecording } = useRecordings();
   const { language } = useSettings();
   const recording = recordings.find((r) => r.id === id);
 
@@ -72,6 +72,8 @@ export default function DetailScreen() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [showTyping, setShowTyping] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showRename, setShowRename] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
   const inputRef = useRef<TextInput>(null);
 
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
@@ -208,6 +210,12 @@ export default function DetailScreen() {
           </Text>
         </View>
         <View style={styles.headerActions}>
+          <Pressable
+            onPress={() => { setRenameValue(recording.title); setShowRename(true); }}
+            style={styles.headerBtn}
+          >
+            <Feather name="edit-2" size={19} color={theme.textSecondary} />
+          </Pressable>
           <Pressable onPress={handleShare} style={styles.headerBtn}>
             <Ionicons name="share-outline" size={22} color={Colors.indigo} />
           </Pressable>
@@ -417,6 +425,55 @@ export default function DetailScreen() {
           </View>
         </KeyboardAvoidingView>
       )}
+
+      {/* Rename modal */}
+      <Modal visible={showRename} transparent animationType="none" onRequestClose={() => setShowRename(false)} statusBarTranslucent>
+        <Pressable style={styles.renameBackdrop} onPress={() => setShowRename(false)}>
+          <Animated.View entering={SlideInDown.springify().damping(20)} style={[styles.renameSheet, { backgroundColor: theme.card }]}>
+            <Pressable>
+              <View style={styles.renameHandle}>
+                <View style={[styles.renameHandleBar, { backgroundColor: theme.border }]} />
+              </View>
+              <View style={styles.renameHeader}>
+                <Text style={[styles.renameTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>Rename Recording</Text>
+                <Pressable onPress={() => setShowRename(false)} style={styles.renameClose}>
+                  <Ionicons name="close" size={22} color={theme.textSecondary} />
+                </Pressable>
+              </View>
+              <View style={styles.renameBody}>
+                <TextInput
+                  style={[styles.renameInput, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border, fontFamily: "DMSans_400Regular" }]}
+                  value={renameValue}
+                  onChangeText={setRenameValue}
+                  autoFocus
+                  selectTextOnFocus
+                  returnKeyType="done"
+                  onSubmitEditing={async () => {
+                    const trimmed = renameValue.trim();
+                    if (!trimmed) return;
+                    await renameRecording(id, trimmed);
+                    setShowRename(false);
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  }}
+                />
+                <Pressable
+                  onPress={async () => {
+                    const trimmed = renameValue.trim();
+                    if (!trimmed) return;
+                    await renameRecording(id, trimmed);
+                    setShowRename(false);
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  }}
+                  style={({ pressed }) => [styles.renameSaveBtn, { backgroundColor: renameValue.trim() ? Colors.indigo : theme.border, opacity: pressed ? 0.8 : 1 }]}
+                >
+                  <Feather name="check" size={18} color={renameValue.trim() ? "#fff" : theme.textTertiary} />
+                  <Text style={[styles.renameSaveBtnText, { color: renameValue.trim() ? "#fff" : theme.textTertiary, fontFamily: "DMSans_700Bold" }]}>Save</Text>
+                </Pressable>
+              </View>
+            </Pressable>
+          </Animated.View>
+        </Pressable>
+      </Modal>
 
       {/* Delete confirmation sheet */}
       <Modal
@@ -833,4 +890,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   deleteConfirmText: { fontSize: 16, color: "#fff" },
+
+  // Rename modal
+  renameBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },
+  renameSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.12, shadowRadius: 20, elevation: 20 },
+  renameHandle: { alignItems: "center", paddingTop: 12, paddingBottom: 4 },
+  renameHandleBar: { width: 36, height: 4, borderRadius: 2 },
+  renameHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 16 },
+  renameTitle: { fontSize: 20 },
+  renameClose: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
+  renameBody: { paddingHorizontal: 20, paddingBottom: 32, gap: 12 },
+  renameInput: { borderRadius: 14, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 13, fontSize: 16 },
+  renameSaveBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 15, borderRadius: 16 },
+  renameSaveBtnText: { fontSize: 16 },
 });
