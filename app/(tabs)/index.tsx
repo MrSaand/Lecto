@@ -31,13 +31,26 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-function RecordingCard({ item, theme, onPress }: { item: Recording; theme: typeof Colors.light; onPress: () => void }) {
+function RecordingCard({
+  item,
+  theme,
+  onPress,
+  onDeletePress,
+}: {
+  item: Recording;
+  theme: typeof Colors.light;
+  onPress: () => void;
+  onDeletePress: () => void;
+}) {
   const speakerColors = [Colors.coral, Colors.mint, Colors.indigo, Colors.indigoLight];
   return (
     <Animated.View entering={FadeInDown.springify()}>
       <Pressable
         onPress={onPress}
-        style={({ pressed }) => [styles.card, { backgroundColor: theme.card, opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }]}
+        style={({ pressed }) => [
+          styles.card,
+          { backgroundColor: theme.card, opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] },
+        ]}
       >
         <View style={styles.cardHeader}>
           <View style={[styles.waveIcon, { backgroundColor: Colors.indigo + "18" }]}>
@@ -59,16 +72,27 @@ function RecordingCard({ item, theme, onPress }: { item: Recording; theme: typeo
           {item.title}
         </Text>
         {item.summary.length > 0 && (
-          <Text style={[styles.cardPreview, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]} numberOfLines={2}>
+          <Text
+            style={[styles.cardPreview, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}
+            numberOfLines={2}
+          >
             {item.summary[0]}
           </Text>
         )}
         <View style={styles.cardFooter}>
           <View style={styles.speakerPills}>
             {item.speakers.slice(0, 3).map((s, i) => (
-              <View key={i} style={[styles.speakerPill, { backgroundColor: speakerColors[i % speakerColors.length] + "22" }]}>
+              <View
+                key={i}
+                style={[styles.speakerPill, { backgroundColor: speakerColors[i % speakerColors.length] + "22" }]}
+              >
                 <View style={[styles.speakerDot, { backgroundColor: speakerColors[i % speakerColors.length] }]} />
-                <Text style={[styles.speakerPillText, { color: speakerColors[i % speakerColors.length], fontFamily: "DMSans_500Medium" }]}>
+                <Text
+                  style={[
+                    styles.speakerPillText,
+                    { color: speakerColors[i % speakerColors.length], fontFamily: "DMSans_500Medium" },
+                  ]}
+                >
                   {s}
                 </Text>
               </View>
@@ -79,14 +103,104 @@ function RecordingCard({ item, theme, onPress }: { item: Recording; theme: typeo
               </Text>
             )}
           </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
+          <View style={styles.cardActions}>
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation();
+                onDeletePress();
+              }}
+              hitSlop={12}
+              style={({ pressed }) => [styles.deleteBtn, { opacity: pressed ? 0.6 : 1 }]}
+            >
+              <Feather name="trash-2" size={16} color={Colors.coral} />
+            </Pressable>
+            <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
+          </View>
         </View>
       </Pressable>
     </Animated.View>
   );
 }
 
-function SettingsModal({ visible, onClose, theme, isDark }: { visible: boolean; onClose: () => void; theme: typeof Colors.light; isDark: boolean }) {
+function DeleteConfirmModal({
+  recording,
+  onCancel,
+  onConfirm,
+  theme,
+}: {
+  recording: Recording | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+  theme: typeof Colors.light;
+}) {
+  const visible = recording !== null;
+  return (
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onCancel} statusBarTranslucent>
+      <Pressable style={styles.modalBackdrop} onPress={onCancel}>
+        <Animated.View
+          entering={SlideInDown.springify().damping(20)}
+          exiting={SlideOutDown.duration(200)}
+          style={[styles.modalSheet, { backgroundColor: theme.card }]}
+        >
+          <Pressable>
+            <View style={styles.sheetHandle}>
+              <View style={[styles.handleBar, { backgroundColor: theme.border }]} />
+            </View>
+
+            <View style={styles.deleteSheetBody}>
+              <View style={[styles.deleteIconWrap, { backgroundColor: Colors.coral + "14" }]}>
+                <Feather name="trash-2" size={28} color={Colors.coral} />
+              </View>
+              <Text style={[styles.deleteTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
+                Delete Recording?
+              </Text>
+              <Text style={[styles.deleteSubtitle, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
+                {recording?.title}
+              </Text>
+              <Text style={[styles.deleteWarning, { color: theme.textTertiary, fontFamily: "DMSans_400Regular" }]}>
+                This recording and its notes will be permanently deleted. This cannot be undone.
+              </Text>
+            </View>
+
+            <View style={styles.deleteActions}>
+              <Pressable
+                onPress={onCancel}
+                style={({ pressed }) => [
+                  styles.cancelBtn,
+                  { backgroundColor: theme.border, opacity: pressed ? 0.7 : 1 },
+                ]}
+              >
+                <Text style={[styles.cancelBtnText, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>
+                  Cancel
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={onConfirm}
+                style={({ pressed }) => [
+                  styles.confirmDeleteBtn,
+                  { backgroundColor: Colors.coral, opacity: pressed ? 0.8 : 1 },
+                ]}
+              >
+                <Feather name="trash-2" size={16} color="#fff" />
+                <Text style={[styles.confirmDeleteBtnText, { fontFamily: "DMSans_700Bold" }]}>Delete</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Animated.View>
+      </Pressable>
+    </Modal>
+  );
+}
+
+function SettingsModal({
+  visible,
+  onClose,
+  theme,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  theme: typeof Colors.light;
+}) {
   const { language, setLanguage } = useSettings();
 
   const handleSelectLanguage = async (lang: Language) => {
@@ -114,7 +228,6 @@ function SettingsModal({ visible, onClose, theme, isDark }: { visible: boolean; 
               </Pressable>
             </View>
 
-            {/* Language section */}
             <View style={[styles.sectionHeader, { borderBottomColor: theme.border }]}>
               <View style={[styles.sectionIcon, { backgroundColor: Colors.indigo + "18" }]}>
                 <Ionicons name="language" size={16} color={Colors.indigo} />
@@ -155,13 +268,13 @@ function SettingsModal({ visible, onClose, theme, isDark }: { visible: boolean; 
                       <Text style={[styles.langName, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>
                         {lang.name}
                       </Text>
-                      <Text style={[styles.langNative, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
+                      <Text
+                        style={[styles.langNative, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}
+                      >
                         {lang.nativeName}
                       </Text>
                     </View>
-                    {isSelected && (
-                      <Ionicons name="checkmark-circle" size={22} color={Colors.indigo} />
-                    )}
+                    {isSelected && <Ionicons name="checkmark-circle" size={22} color={Colors.indigo} />}
                   </Pressable>
                 );
               })}
@@ -178,10 +291,11 @@ export default function LibraryScreen() {
   const isDark = colorScheme === "dark";
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
-  const { recordings, isLoading } = useRecordings();
+  const { recordings, deleteRecording, isLoading } = useRecordings();
   const { language } = useSettings();
   const [search, setSearch] = useState("");
   const [showSettings, setShowSettings] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<Recording | null>(null);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return recordings;
@@ -195,6 +309,13 @@ export default function LibraryScreen() {
   }, [recordings, search]);
 
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
+
+  const handleDeleteConfirm = async () => {
+    if (!pendingDelete) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    await deleteRecording(pendingDelete.id);
+    setPendingDelete(null);
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -234,7 +355,6 @@ export default function LibraryScreen() {
         )}
       </View>
 
-      {/* Active language indicator */}
       {language.code !== "en" && (
         <View style={[styles.langBanner, { backgroundColor: Colors.indigo + "12", borderColor: Colors.indigo + "30" }]}>
           <Ionicons name="language" size={13} color={Colors.indigo} />
@@ -247,7 +367,9 @@ export default function LibraryScreen() {
       {isLoading ? (
         <View style={styles.emptyState}>
           <Ionicons name="hourglass-outline" size={48} color={theme.textTertiary} />
-          <Text style={[styles.emptyText, { color: theme.textTertiary, fontFamily: "DMSans_400Regular" }]}>Loading...</Text>
+          <Text style={[styles.emptyText, { color: theme.textTertiary, fontFamily: "DMSans_400Regular" }]}>
+            Loading...
+          </Text>
         </View>
       ) : filtered.length === 0 ? (
         <View style={styles.emptyState}>
@@ -273,6 +395,10 @@ export default function LibraryScreen() {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 router.push({ pathname: "/detail/[id]", params: { id: item.id } });
               }}
+              onDeletePress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                setPendingDelete(item);
+              }}
             />
           )}
           contentContainerStyle={[
@@ -283,12 +409,14 @@ export default function LibraryScreen() {
         />
       )}
 
-      <SettingsModal
-        visible={showSettings}
-        onClose={() => setShowSettings(false)}
+      <DeleteConfirmModal
+        recording={pendingDelete}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={handleDeleteConfirm}
         theme={theme}
-        isDark={isDark}
       />
+
+      <SettingsModal visible={showSettings} onClose={() => setShowSettings(false)} theme={theme} />
     </View>
   );
 }
@@ -304,14 +432,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  appName: {
-    fontSize: 32,
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 14,
-    marginTop: 2,
-  },
+  appName: { fontSize: 32, letterSpacing: -0.5 },
+  subtitle: { fontSize: 14, marginTop: 2 },
   settingsBtn: {
     width: 42,
     height: 42,
@@ -331,10 +453,7 @@ const styles = StyleSheet.create({
     gap: 10,
     borderWidth: 1,
   },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-  },
+  searchInput: { flex: 1, fontSize: 15 },
   langBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -346,13 +465,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
   },
-  langBannerText: {
-    fontSize: 12,
-  },
-  list: {
-    paddingHorizontal: 16,
-    gap: 12,
-  },
+  langBannerText: { fontSize: 12 },
+  list: { paddingHorizontal: 16, gap: 12 },
   card: {
     borderRadius: 18,
     padding: 16,
@@ -363,11 +477,7 @@ const styles = StyleSheet.create({
     elevation: 3,
     gap: 10,
   },
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
+  cardHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
   waveIcon: {
     width: 36,
     height: 36,
@@ -386,18 +496,39 @@ const styles = StyleSheet.create({
   cardDuration: { fontSize: 12 },
   cardTitle: { fontSize: 16, lineHeight: 22 },
   cardPreview: { fontSize: 13, lineHeight: 18 },
-  cardFooter: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 2 },
+  cardFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 2,
+  },
   speakerPills: { flexDirection: "row", flexWrap: "wrap", gap: 6, flex: 1 },
-  speakerPill: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
+  speakerPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 20,
+  },
   speakerDot: { width: 5, height: 5, borderRadius: 3 },
   speakerPillText: { fontSize: 11 },
   moreSpeakers: { fontSize: 11, alignSelf: "center" },
+  cardActions: { flexDirection: "row", alignItems: "center", gap: 12 },
+  deleteBtn: { padding: 4 },
   emptyState: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 40 },
-  emptyIconWrap: { width: 80, height: 80, borderRadius: 24, alignItems: "center", justifyContent: "center", marginBottom: 8 },
+  emptyIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
   emptyTitle: { fontSize: 20, textAlign: "center" },
   emptyText: { fontSize: 14, textAlign: "center", lineHeight: 20 },
 
-  // Settings modal
+  // Shared modal styles
   modalBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.45)",
@@ -413,16 +544,54 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 20,
   },
-  sheetHandle: {
+  sheetHandle: { alignItems: "center", paddingTop: 12, paddingBottom: 4 },
+  handleBar: { width: 36, height: 4, borderRadius: 2 },
+
+  // Delete confirm sheet
+  deleteSheetBody: {
     alignItems: "center",
-    paddingTop: 12,
-    paddingBottom: 4,
+    paddingHorizontal: 28,
+    paddingTop: 20,
+    paddingBottom: 8,
+    gap: 10,
   },
-  handleBar: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
+  deleteIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
   },
+  deleteTitle: { fontSize: 20, textAlign: "center" },
+  deleteSubtitle: { fontSize: 15, textAlign: "center" },
+  deleteWarning: { fontSize: 13, textAlign: "center", lineHeight: 19, marginTop: 4 },
+  deleteActions: {
+    flexDirection: "row",
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 15,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cancelBtnText: { fontSize: 16 },
+  confirmDeleteBtn: {
+    flex: 1,
+    flexDirection: "row",
+    gap: 8,
+    paddingVertical: 15,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  confirmDeleteBtnText: { fontSize: 16, color: "#fff" },
+
+  // Settings sheet
   sheetHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -430,15 +599,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
-  sheetTitle: {
-    fontSize: 20,
-  },
-  sheetClose: {
-    width: 36,
-    height: 36,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  sheetTitle: { fontSize: 20 },
+  sheetClose: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "flex-start",
