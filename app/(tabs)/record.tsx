@@ -478,7 +478,7 @@ export default function RecordScreen() {
       <Paywall
         visible={showPaywall}
         onClose={() => setShowPaywall(false)}
-        isDismissible={false}
+        fromLimit
       />
     </View>
   );

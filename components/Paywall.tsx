@@ -11,7 +11,7 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons, Feather } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import Animated, { FadeIn, FadeInDown, SlideInDown } from "react-native-reanimated";
@@ -26,23 +26,25 @@ const FEATURES = [
   { icon: "language-outline" as const, label: "Multi-language support" },
 ];
 
+type StatusType = "success" | "cancelled" | "error" | "";
+
 interface PaywallProps {
   visible: boolean;
   onClose: () => void;
-  isDismissible?: boolean;
+  fromLimit?: boolean;
 }
 
-export default function Paywall({ visible, onClose, isDismissible = true }: PaywallProps) {
+export default function Paywall({ visible, onClose, fromLimit = false }: PaywallProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
-  const { monthlyPackage, yearlyPackage, purchaseMonthly, purchaseYearly, restorePurchases, isSubscribed } = useSubscription();
+  const { monthlyPackage, yearlyPackage, purchaseMonthly, purchaseYearly, restorePurchases } = useSubscription();
 
   const [selectedPlan, setSelectedPlan] = useState<"monthly" | "yearly">("yearly");
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
-  const [statusMsg, setStatusMsg] = useState("");
+  const [status, setStatus] = useState<StatusType>("");
 
   const monthlyPrice = monthlyPackage?.product.priceString ?? "$9.99";
   const yearlyPrice = yearlyPackage?.product.priceString ?? "$49.99";
@@ -51,23 +53,23 @@ export default function Paywall({ visible, onClose, isDismissible = true }: Payw
   const handlePurchase = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsPurchasing(true);
-    setStatusMsg("");
+    setStatus("");
     try {
-      let success = false;
-      if (selectedPlan === "monthly") {
-        success = await purchaseMonthly();
-      } else {
-        success = await purchaseYearly();
-      }
-      if (success) {
-        setStatusMsg("Subscription activated!");
+      const result = selectedPlan === "monthly"
+        ? await purchaseMonthly()
+        : await purchaseYearly();
+
+      if (result === "success") {
+        setStatus("success");
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        setTimeout(() => onClose(), 1000);
+        setTimeout(() => onClose(), 1200);
+      } else if (result === "cancelled") {
+        setStatus("cancelled");
       } else {
-        setStatusMsg("Purchase cancelled.");
+        setStatus("error");
       }
     } catch {
-      setStatusMsg("Something went wrong. Please try again.");
+      setStatus("error");
     } finally {
       setIsPurchasing(false);
     }
@@ -76,37 +78,48 @@ export default function Paywall({ visible, onClose, isDismissible = true }: Payw
   const handleRestore = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setIsRestoring(true);
-    setStatusMsg("");
+    setStatus("");
     try {
       const restored = await restorePurchases();
       if (restored) {
-        setStatusMsg("Subscription restored!");
+        setStatus("success");
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        setTimeout(() => onClose(), 1000);
+        setTimeout(() => onClose(), 1200);
       } else {
-        setStatusMsg("No previous purchases found.");
+        setStatus("cancelled");
       }
     } catch {
-      setStatusMsg("Restore failed. Try again.");
+      setStatus("error");
     } finally {
       setIsRestoring(false);
     }
   };
 
+  const statusText = () => {
+    if (status === "success") return "Subscription activated!";
+    if (status === "cancelled") return "Purchase cancelled.";
+    if (status === "error") return "Something went wrong. Please try again.";
+    return "";
+  };
+
+  const statusColor = () => {
+    if (status === "success") return Colors.mint;
+    if (status === "cancelled") return theme.textSecondary;
+    if (status === "error") return Colors.coral;
+    return theme.textSecondary;
+  };
+
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={isDismissible ? onClose : undefined} statusBarTranslucent>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <View style={styles.backdrop}>
         <Animated.View entering={SlideInDown.springify().damping(22)} style={[styles.sheet, { backgroundColor: theme.background }]}>
-          {isDismissible && (
-            <Pressable onPress={onClose} style={[styles.closeBtn, { backgroundColor: theme.card }]}>
-              <Ionicons name="close" size={20} color={theme.textSecondary} />
-            </Pressable>
-          )}
+          <Pressable onPress={onClose} style={[styles.closeBtn, { backgroundColor: theme.card }]}>
+            <Ionicons name="close" size={20} color={theme.textSecondary} />
+          </Pressable>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bottomInset + 16 }}>
-            {/* Header */}
             <Animated.View entering={FadeIn.delay(100).duration(400)} style={styles.heroSection}>
               <View style={[styles.heroIconWrap, { backgroundColor: Colors.indigo + "20" }]}>
                 <View style={[styles.heroIconInner, { backgroundColor: Colors.indigo }]}>
@@ -117,13 +130,12 @@ export default function Paywall({ visible, onClose, isDismissible = true }: Payw
                 Lecto Pro
               </Text>
               <Text style={[styles.heroSubtitle, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
-                {isDismissible
-                  ? "Unlock the full power of AI note-taking"
-                  : "You've used your 2 free recordings. Subscribe to keep going."}
+                {fromLimit
+                  ? "You've reached your 2 free recordings. Subscribe to continue."
+                  : "Unlock the full power of AI note-taking"}
               </Text>
             </Animated.View>
 
-            {/* Features */}
             <Animated.View entering={FadeInDown.delay(150).duration(400)} style={styles.featuresSection}>
               {FEATURES.map((f, i) => (
                 <View key={i} style={styles.featureRow}>
@@ -135,9 +147,7 @@ export default function Paywall({ visible, onClose, isDismissible = true }: Payw
               ))}
             </Animated.View>
 
-            {/* Plan selector */}
             <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.plansSection}>
-              {/* Yearly */}
               <Pressable
                 onPress={() => { Haptics.selectionAsync(); setSelectedPlan("yearly"); }}
                 style={[
@@ -161,12 +171,9 @@ export default function Paywall({ visible, onClose, isDismissible = true }: Payw
                     </Text>
                   </View>
                 </View>
-                <Text style={[styles.planPrice, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
-                  {yearlyPrice}
-                </Text>
+                <Text style={[styles.planPrice, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>{yearlyPrice}</Text>
               </Pressable>
 
-              {/* Monthly */}
               <Pressable
                 onPress={() => { Haptics.selectionAsync(); setSelectedPlan("monthly"); }}
                 style={[
@@ -180,9 +187,7 @@ export default function Paywall({ visible, onClose, isDismissible = true }: Payw
                   </View>
                   <View>
                     <Text style={[styles.planTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>Monthly</Text>
-                    <Text style={[styles.planSubtitle, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
-                      Billed monthly
-                    </Text>
+                    <Text style={[styles.planSubtitle, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>Billed monthly</Text>
                   </View>
                 </View>
                 <Text style={[styles.planPrice, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
@@ -191,14 +196,12 @@ export default function Paywall({ visible, onClose, isDismissible = true }: Payw
               </Pressable>
             </Animated.View>
 
-            {/* Status message */}
-            {statusMsg ? (
-              <Text style={[styles.statusMsg, { color: statusMsg.includes("activated") || statusMsg.includes("restored") ? Colors.mint : Colors.coral, fontFamily: "DMSans_500Medium" }]}>
-                {statusMsg}
+            {status ? (
+              <Text style={[styles.statusMsg, { color: statusColor(), fontFamily: "DMSans_500Medium" }]}>
+                {statusText()}
               </Text>
             ) : null}
 
-            {/* CTA */}
             <Animated.View entering={FadeInDown.delay(250).duration(400)} style={styles.ctaSection}>
               <Pressable
                 onPress={handlePurchase}

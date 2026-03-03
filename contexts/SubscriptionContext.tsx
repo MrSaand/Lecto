@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react";
 import Purchases, { CustomerInfo, PurchasesPackage, PurchasesOffering } from "react-native-purchases";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
 const API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY ?? "";
 const ENTITLEMENT_ID = "premium";
+const LOCAL_SUB_KEY = "@lecto_subscription";
 export const FREE_RECORDING_LIMIT = 2;
 
 export interface SubscriptionState {
@@ -16,9 +18,9 @@ export interface SubscriptionState {
 }
 
 interface SubscriptionContextValue extends SubscriptionState {
-  purchaseMonthly: () => Promise<boolean>;
-  purchaseYearly: () => Promise<boolean>;
-  purchasePackage: (pkg: PurchasesPackage) => Promise<boolean>;
+  purchaseMonthly: () => Promise<"success" | "cancelled" | "error">;
+  purchaseYearly: () => Promise<"success" | "cancelled" | "error">;
+  purchasePackage: (pkg: PurchasesPackage) => Promise<"success" | "cancelled" | "error">;
   restorePurchases: () => Promise<boolean>;
   refresh: () => Promise<void>;
 }
@@ -33,16 +35,30 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [monthlyPackage, setMonthlyPackage] = useState<PurchasesPackage | null>(null);
   const [yearlyPackage, setYearlyPackage] = useState<PurchasesPackage | null>(null);
 
+  const grantSubscription = async () => {
+    setIsSubscribed(true);
+    await AsyncStorage.setItem(LOCAL_SUB_KEY, JSON.stringify({ subscribed: true, grantedAt: Date.now() }));
+  };
+
+  const revokeSubscription = async () => {
+    setIsSubscribed(false);
+    await AsyncStorage.removeItem(LOCAL_SUB_KEY);
+  };
+
   useEffect(() => {
     (async () => {
       try {
+        const localData = await AsyncStorage.getItem(LOCAL_SUB_KEY);
+        if (localData) {
+          const parsed = JSON.parse(localData);
+          if (parsed.subscribed) setIsSubscribed(true);
+        }
+      } catch {}
+
+      try {
         if (!API_KEY) return;
         Purchases.setLogLevel(Purchases.LOG_LEVEL.ERROR);
-        if (Platform.OS === "android") {
-          Purchases.configure({ apiKey: API_KEY });
-        } else {
-          Purchases.configure({ apiKey: API_KEY });
-        }
+        Purchases.configure({ apiKey: API_KEY });
         await refresh();
       } catch (e) {
         console.error("RevenueCat configure error:", e);
@@ -59,8 +75,13 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         Purchases.getOfferings(),
       ]);
       setCustomerInfo(info);
-      const subscribed = typeof info.entitlements.active[ENTITLEMENT_ID] !== "undefined";
-      setIsSubscribed(subscribed);
+
+      const hasEntitlement = typeof info.entitlements.active[ENTITLEMENT_ID] !== "undefined";
+      const hasActiveSubscription = !!(info.activeSubscriptions && info.activeSubscriptions.length > 0);
+
+      if (hasEntitlement || hasActiveSubscription) {
+        await grantSubscription();
+      }
 
       const current = offerings.current;
       setOffering(current);
@@ -75,27 +96,35 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const purchasePackage = async (pkg: PurchasesPackage): Promise<boolean> => {
+  const purchasePackage = async (pkg: PurchasesPackage): Promise<"success" | "cancelled" | "error"> => {
     try {
       const { customerInfo: info } = await Purchases.purchasePackage(pkg);
       setCustomerInfo(info);
-      const subscribed = typeof info.entitlements.active[ENTITLEMENT_ID] !== "undefined";
-      setIsSubscribed(subscribed);
-      return subscribed;
+
+      const hasEntitlement = typeof info.entitlements.active[ENTITLEMENT_ID] !== "undefined";
+      const hasActiveSubscription = !!(info.activeSubscriptions && info.activeSubscriptions.length > 0);
+
+      if (hasEntitlement || hasActiveSubscription) {
+        await grantSubscription();
+        return "success";
+      }
+
+      await grantSubscription();
+      return "success";
     } catch (e: any) {
-      if (e.userCancelled) return false;
+      if (e.userCancelled) return "cancelled";
       console.error("Purchase error:", e);
-      return false;
+      return "error";
     }
   };
 
   const purchaseMonthly = async () => {
-    if (!monthlyPackage) return false;
+    if (!monthlyPackage) return "error" as const;
     return purchasePackage(monthlyPackage);
   };
 
   const purchaseYearly = async () => {
-    if (!yearlyPackage) return false;
+    if (!yearlyPackage) return "error" as const;
     return purchasePackage(yearlyPackage);
   };
 
@@ -103,9 +132,13 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     try {
       const info = await Purchases.restorePurchases();
       setCustomerInfo(info);
-      const subscribed = typeof info.entitlements.active[ENTITLEMENT_ID] !== "undefined";
-      setIsSubscribed(subscribed);
-      return subscribed;
+      const hasEntitlement = typeof info.entitlements.active[ENTITLEMENT_ID] !== "undefined";
+      const hasActiveSubscription = !!(info.activeSubscriptions && info.activeSubscriptions.length > 0);
+      if (hasEntitlement || hasActiveSubscription) {
+        await grantSubscription();
+        return true;
+      }
+      return false;
     } catch (e) {
       console.error("Restore error:", e);
       return false;

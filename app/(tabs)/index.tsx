@@ -566,7 +566,7 @@ function SettingsModal({ visible, onClose, theme }: { visible: boolean; onClose:
         </Pressable>
       </Modal>
 
-      <Paywall visible={showPaywall} onClose={() => setShowPaywall(false)} isDismissible />
+      <Paywall visible={showPaywall} onClose={() => setShowPaywall(false)} />
     </>
   );
 }
