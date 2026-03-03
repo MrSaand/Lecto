@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { useRecordings } from "@/contexts/RecordingsContext";
-import { apiRequest, getApiUrl } from "@/lib/query-client";
+import { getApiUrl } from "@/lib/query-client";
 import * as FileSystem from "expo-file-system";
 import Animated, {
   useSharedValue,
@@ -21,7 +21,6 @@ import Animated, {
   withRepeat,
   withTiming,
   withSpring,
-  interpolate,
   FadeIn,
   FadeOut,
 } from "react-native-reanimated";
@@ -46,8 +45,8 @@ function PulseRing({ active }: { active: boolean }) {
   useEffect(() => {
     if (active) {
       scale.value = withRepeat(withTiming(1.8, { duration: 1200 }), -1, true);
-      opacity.value = withRepeat(withTiming(0, { duration: 1200 }), -1, true);
       opacity.value = 0.5;
+      opacity.value = withRepeat(withTiming(0, { duration: 1200 }), -1, true);
     } else {
       scale.value = withSpring(1);
       opacity.value = withTiming(0);
@@ -72,7 +71,13 @@ export default function RecordScreen() {
   const [recordState, setRecordState] = useState<RecordState>("idle");
   const [elapsed, setElapsed] = useState(0);
   const [statusMsg, setStatusMsg] = useState("");
+
+  // Native recording ref
   const recordingRef = useRef<Audio.Recording | null>(null);
+  // Web recording refs
+  const mediaRecorderRef = useRef<any>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const elapsedRef = useRef(0);
 
@@ -92,28 +97,80 @@ export default function RecordScreen() {
     }
   };
 
-  useEffect(() => {
-    return () => stopTimer();
-  }, []);
+  useEffect(() => () => stopTimer(), []);
 
-  const requestPermission = async () => {
-    const { status } = await Audio.requestPermissionsAsync();
-    return status === "granted";
+  // ─── Web recording via MediaRecorder ───────────────────────────────────────
+  const startWebRecording = async () => {
+    try {
+      const stream = await (navigator as any).mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new (window as any).MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+      mediaRecorder.ondataavailable = (e: any) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      mediaRecorder.start(100);
+      elapsedRef.current = 0;
+      setElapsed(0);
+      setRecordState("recording");
+      startTimer();
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch (e: any) {
+      Alert.alert("Permission Required", "Microphone access is needed to record audio.");
+    }
   };
 
-  const startRecording = async () => {
-    const granted = await requestPermission();
-    if (!granted) {
+  const pauseWebRecording = () => {
+    if (mediaRecorderRef.current?.state === "recording") {
+      mediaRecorderRef.current.pause();
+      setRecordState("paused");
+      stopTimer();
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  };
+
+  const resumeWebRecording = () => {
+    if (mediaRecorderRef.current?.state === "paused") {
+      mediaRecorderRef.current.resume();
+      setRecordState("recording");
+      startTimer();
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  };
+
+  const stopWebRecording = (): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const mr = mediaRecorderRef.current;
+      if (!mr) return reject(new Error("No recorder"));
+      mr.onstop = async () => {
+        try {
+          mr.stream.getTracks().forEach((t: any) => t.stop());
+          const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+          const reader = new FileReader();
+          reader.onload = () => {
+            const dataUrl = reader.result as string;
+            const base64 = dataUrl.split(",")[1];
+            resolve(base64);
+          };
+          reader.onerror = () => reject(new Error("Failed to read audio"));
+          reader.readAsDataURL(blob);
+        } catch (e) {
+          reject(e);
+        }
+      };
+      mr.stop();
+    });
+  };
+
+  // ─── Native recording via expo-av ──────────────────────────────────────────
+  const startNativeRecording = async () => {
+    const { status } = await Audio.requestPermissionsAsync();
+    if (status !== "granted") {
       Alert.alert("Permission Required", "Microphone access is needed to record audio.");
       return;
     }
-
     try {
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
-
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
       const { recording } = await Audio.Recording.createAsync(
         Audio.RecordingOptionsPresets.HIGH_QUALITY
       );
@@ -123,56 +180,73 @@ export default function RecordScreen() {
       setRecordState("recording");
       startTimer();
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    } catch (e) {
-      console.error("Start recording error:", e);
-      Alert.alert("Error", "Could not start recording.");
+    } catch (e: any) {
+      Alert.alert("Error", "Could not start recording: " + (e?.message || String(e)));
     }
   };
 
-  const pauseRecording = async () => {
+  const pauseNativeRecording = async () => {
     try {
       await recordingRef.current?.pauseAsync();
       setRecordState("paused");
       stopTimer();
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } catch (e) {
-      console.error("Pause error:", e);
-    }
+    } catch (e) {}
   };
 
-  const resumeRecording = async () => {
+  const resumeNativeRecording = async () => {
     try {
       await recordingRef.current?.startAsync();
       setRecordState("recording");
       startTimer();
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } catch (e) {
-      console.error("Resume error:", e);
-    }
+    } catch (e) {}
   };
 
-  const stopAndProcess = async () => {
-    if (!recordingRef.current) return;
+  const stopNativeRecording = async (): Promise<{ base64: string; filename: string }> => {
+    if (!recordingRef.current) throw new Error("No recording in progress");
+    await recordingRef.current.stopAndUnloadAsync();
+    const uri = recordingRef.current.getURI();
+    recordingRef.current = null;
+    if (!uri) throw new Error("Recording URI is unavailable");
+    const base64 = await FileSystem.readAsStringAsync(uri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    const filename = uri.split("/").pop() || "recording.m4a";
+    return { base64, filename };
+  };
 
+  // ─── Unified actions ────────────────────────────────────────────────────────
+  const startRecording = () =>
+    Platform.OS === "web" ? startWebRecording() : startNativeRecording();
+
+  const pauseRecording = () =>
+    Platform.OS === "web" ? pauseWebRecording() : pauseNativeRecording();
+
+  const resumeRecording = () =>
+    Platform.OS === "web" ? resumeWebRecording() : resumeNativeRecording();
+
+  const stopAndProcess = async () => {
     try {
       setRecordState("processing");
       stopTimer();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      await recordingRef.current.stopAndUnloadAsync();
-      const uri = recordingRef.current.getURI();
-      recordingRef.current = null;
+      let base64: string;
+      let filename: string;
 
-      if (!uri) throw new Error("No recording URI");
+      if (Platform.OS === "web") {
+        setStatusMsg("Stopping recording...");
+        base64 = await stopWebRecording();
+        filename = "recording.webm";
+      } else {
+        setStatusMsg("Stopping recording...");
+        const result = await stopNativeRecording();
+        base64 = result.base64;
+        filename = result.filename;
+      }
 
-      setStatusMsg("Uploading audio...");
-      const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-
-      const filename = uri.split("/").pop() || "recording.m4a";
       setStatusMsg("Transcribing with AI...");
-
       const baseUrl = getApiUrl();
       const response = await fetch(`${baseUrl}api/transcribe`, {
         method: "POST",
@@ -181,8 +255,12 @@ export default function RecordScreen() {
       });
 
       if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || "Transcription failed");
+        let errMsg = "Transcription failed";
+        try {
+          const err = await response.json();
+          errMsg = err.error || errMsg;
+        } catch {}
+        throw new Error(errMsg);
       }
 
       setStatusMsg("Generating summary...");
@@ -206,14 +284,13 @@ export default function RecordScreen() {
       setElapsed(0);
       elapsedRef.current = 0;
       setStatusMsg("");
-
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.push({ pathname: "/detail/[id]", params: { id: newRecording.id } });
     } catch (e: any) {
-      console.error("Stop error:", e);
+      console.error("Stop error:", e?.message || String(e));
       setRecordState("idle");
       setStatusMsg("");
-      Alert.alert("Error", e.message || "Could not process recording.");
+      Alert.alert("Error", e?.message || "Could not process recording. Please try again.");
     }
   };
 
@@ -226,23 +303,29 @@ export default function RecordScreen() {
     else if (recordState === "paused") resumeRecording();
   };
 
-  const buttonStyle = useAnimatedStyle(() => ({
+  const buttonAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: buttonScale.value }],
   }));
 
   const isActive = recordState === "recording";
   const isPaused = recordState === "paused";
   const isProcessing = recordState === "processing";
+  const isIdle = recordState === "idle";
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
   const bottomPadding = Platform.OS === "web" ? 84 : insets.bottom + 70;
+
+  const buttonColor = isActive ? Colors.coral : isPaused ? Colors.indigo : Colors.coral;
+  const iconName = isActive ? "pause" : isPaused ? "play" : "mic";
+  const timerColor = isActive ? Colors.coral : isPaused ? Colors.indigo : theme.textTertiary;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView
         contentContainerStyle={[styles.content, { paddingTop: topPadding + 20, paddingBottom: bottomPadding }]}
         showsVerticalScrollIndicator={false}
+        scrollEnabled={false}
       >
-        <Animated.View entering={FadeIn.duration(500)}>
+        <Animated.View entering={FadeIn.duration(400)} style={styles.headingBlock}>
           <Text style={[styles.header, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
             {isProcessing ? "Processing..." : isActive ? "Recording" : isPaused ? "Paused" : "New Recording"}
           </Text>
@@ -252,75 +335,88 @@ export default function RecordScreen() {
               : isActive
               ? "Speak clearly — Lecto is capturing every word"
               : isPaused
-              ? "Tap to resume recording"
+              ? "Tap to resume or stop when finished"
               : "Tap the button below to start recording"}
           </Text>
         </Animated.View>
 
+        {/* Timer — always same height */}
         <View style={styles.timerSection}>
-          <Text style={[styles.timer, { color: isActive ? Colors.coral : isPaused ? Colors.indigo : theme.textTertiary, fontFamily: "DMSans_700Bold" }]}>
+          <Text style={[styles.timer, { color: timerColor, fontFamily: "DMSans_700Bold" }]}>
             {formatTime(elapsed)}
           </Text>
-          {isActive && (
-            <Animated.View entering={FadeIn} exiting={FadeOut} style={styles.liveIndicator}>
-              <View style={styles.liveDot} />
-              <Text style={[styles.liveText, { fontFamily: "DMSans_700Bold" }]}>LIVE</Text>
-            </Animated.View>
-          )}
+          <View style={styles.liveSlot}>
+            {isActive && (
+              <Animated.View entering={FadeIn} exiting={FadeOut} style={styles.liveIndicator}>
+                <View style={styles.liveDot} />
+                <Text style={[styles.liveText, { fontFamily: "DMSans_700Bold" }]}>LIVE</Text>
+              </Animated.View>
+            )}
+            {isPaused && (
+              <Animated.View entering={FadeIn} exiting={FadeOut} style={[styles.liveIndicator, { backgroundColor: Colors.indigo + "22" }]}>
+                <Ionicons name="pause" size={10} color={Colors.indigo} />
+                <Text style={[styles.liveText, { fontFamily: "DMSans_700Bold", color: Colors.indigo }]}>PAUSED</Text>
+              </Animated.View>
+            )}
+          </View>
         </View>
 
+        {/* Button area — fixed height so nothing shifts */}
         <View style={styles.buttonArea}>
           <View style={styles.pulseContainer}>
             <PulseRing active={isActive} />
-            <Animated.View style={buttonStyle}>
+            <Animated.View style={buttonAnimStyle}>
               <Pressable
                 onPress={handleRecordPress}
                 disabled={isProcessing}
                 style={[
                   styles.recordButton,
                   {
-                    backgroundColor: isActive ? Colors.coral : isPaused ? Colors.indigo : Colors.coral,
+                    backgroundColor: buttonColor,
                     opacity: isProcessing ? 0.5 : 1,
+                    // Only show glow when actively recording
+                    shadowColor: isActive ? Colors.coral : "transparent",
+                    shadowOffset: { width: 0, height: isActive ? 8 : 0 },
+                    shadowOpacity: isActive ? 0.4 : 0,
+                    shadowRadius: isActive ? 20 : 0,
+                    elevation: isActive ? 10 : 0,
                   },
                 ]}
               >
-                <Ionicons
-                  name={isActive ? "pause" : isPaused ? "play" : "mic"}
-                  size={36}
-                  color="#fff"
-                />
+                <Ionicons name={iconName as any} size={36} color="#fff" />
               </Pressable>
             </Animated.View>
           </View>
 
-          {(isActive || isPaused) && !isProcessing && (
-            <Animated.View entering={FadeIn.delay(100)} style={styles.controls}>
-              <Pressable
-                onPress={stopAndProcess}
-                style={[styles.stopButton, { backgroundColor: theme.card, borderColor: theme.border }]}
-              >
-                <Ionicons name="stop" size={22} color={theme.text} />
-                <Text style={[styles.stopLabel, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>
-                  Stop & Process
-                </Text>
-              </Pressable>
-            </Animated.View>
-          )}
-
-          {isProcessing && (
-            <Animated.View entering={FadeIn} style={styles.processingInfo}>
-              <View style={[styles.processingCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+          {/* Stop button — always present but invisible when not needed */}
+          <View style={styles.stopSlot}>
+            {(isActive || isPaused) && !isProcessing && (
+              <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)}>
+                <Pressable
+                  onPress={stopAndProcess}
+                  style={[styles.stopButton, { backgroundColor: theme.card, borderColor: theme.border }]}
+                >
+                  <Ionicons name="stop" size={22} color={theme.text} />
+                  <Text style={[styles.stopLabel, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>
+                    Stop & Process
+                  </Text>
+                </Pressable>
+              </Animated.View>
+            )}
+            {isProcessing && (
+              <Animated.View entering={FadeIn} exiting={FadeOut} style={[styles.processingCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
                 <Ionicons name="sparkles" size={18} color={Colors.mint} />
                 <Text style={[styles.processingText, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
                   {statusMsg}
                 </Text>
-              </View>
-            </Animated.View>
-          )}
+              </Animated.View>
+            )}
+          </View>
         </View>
 
-        {recordState === "idle" && (
-          <Animated.View entering={FadeIn.delay(300)} style={styles.featureList}>
+        {/* Feature list — only in idle state */}
+        {isIdle && (
+          <Animated.View entering={FadeIn.delay(200)} style={styles.featureList}>
             {[
               { icon: "people-outline", text: "Speaker identification & attribution", color: Colors.coral },
               { icon: "document-text-outline", text: "AI-generated summary & action items", color: Colors.mint },
@@ -348,7 +444,13 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 24,
     alignItems: "center",
-    gap: 28,
+    gap: 24,
+  },
+  headingBlock: {
+    alignItems: "center",
+    width: "100%",
+    minHeight: 80,
+    justifyContent: "center",
   },
   header: {
     fontSize: 28,
@@ -364,11 +466,17 @@ const styles = StyleSheet.create({
   },
   timerSection: {
     alignItems: "center",
-    gap: 12,
+    gap: 10,
   },
   timer: {
     fontSize: 56,
     letterSpacing: 2,
+  },
+  // Fixed height slot so LIVE/PAUSED badge doesn't cause layout shift
+  liveSlot: {
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
   },
   liveIndicator: {
     flexDirection: "row",
@@ -376,7 +484,7 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: Colors.coral + "22",
     paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 20,
   },
   liveDot: {
@@ -392,8 +500,8 @@ const styles = StyleSheet.create({
   },
   buttonArea: {
     alignItems: "center",
-    gap: 28,
     width: "100%",
+    gap: 24,
   },
   pulseContainer: {
     width: 120,
@@ -414,15 +522,13 @@ const styles = StyleSheet.create({
     borderRadius: 48,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: Colors.coral,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 10,
   },
-  controls: {
-    width: "100%",
+  // Fixed height slot — stop button appears inside without shifting layout
+  stopSlot: {
+    height: 56,
     alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
   },
   stopButton: {
     flexDirection: "row",
@@ -432,25 +538,19 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 50,
     borderWidth: 1.5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
   },
   stopLabel: {
     fontSize: 15,
-  },
-  processingInfo: {
-    width: "100%",
   },
   processingCard: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    padding: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
     borderRadius: 14,
     borderWidth: 1,
+    width: "100%",
   },
   processingText: {
     fontSize: 14,
@@ -458,7 +558,6 @@ const styles = StyleSheet.create({
   },
   featureList: {
     width: "100%",
-    gap: 0,
   },
   featureRow: {
     flexDirection: "row",
