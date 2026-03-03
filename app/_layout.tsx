@@ -9,6 +9,7 @@ import { queryClient } from "@/lib/query-client";
 import { useFonts, DMSans_400Regular, DMSans_500Medium, DMSans_700Bold } from "@expo-google-fonts/dm-sans";
 import { RecordingsProvider } from "@/contexts/RecordingsContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
+import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 SplashScreen.preventAutoHideAsync();
@@ -42,13 +43,15 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <SettingsProvider>
-            <RecordingsProvider>
-              <GestureHandlerRootView style={{ flex: 1 }}>
-                <KeyboardProvider>
-                  <RootLayoutNav />
-                </KeyboardProvider>
-              </GestureHandlerRootView>
-            </RecordingsProvider>
+            <SubscriptionProvider>
+              <RecordingsProvider>
+                <GestureHandlerRootView style={{ flex: 1 }}>
+                  <KeyboardProvider>
+                    <RootLayoutNav />
+                  </KeyboardProvider>
+                </GestureHandlerRootView>
+              </RecordingsProvider>
+            </SubscriptionProvider>
           </SettingsProvider>
         </QueryClientProvider>
       </SafeAreaProvider>

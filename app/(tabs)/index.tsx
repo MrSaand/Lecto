@@ -18,6 +18,8 @@ import { Ionicons, Feather } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { useRecordings, Recording, Folder } from "@/contexts/RecordingsContext";
 import { useSettings, LANGUAGES, Language } from "@/contexts/SettingsContext";
+import { useSubscription, FREE_RECORDING_LIMIT } from "@/contexts/SubscriptionContext";
+import Paywall from "@/components/Paywall";
 import Animated, { FadeInDown, FadeIn, SlideInDown, FadeInUp } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 
@@ -491,47 +493,81 @@ function DeleteConfirmModal({
 // ─── Settings Modal ────────────────────────────────────────────────────────────
 function SettingsModal({ visible, onClose, theme }: { visible: boolean; onClose: () => void; theme: typeof Colors.light }) {
   const { language, setLanguage } = useSettings();
+  const { isSubscribed } = useSubscription();
+  const [showPaywall, setShowPaywall] = useState(false);
+  const { recordings: allRecordings } = useRecordings();
+  const recordingCount = allRecordings.length;
+
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={styles.modalBackdrop} onPress={onClose}>
-        <Animated.View entering={SlideInDown.springify().damping(20)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
-          <Pressable>
-            <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
-            <View style={styles.sheetHeader}>
-              <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>Settings</Text>
-              <Pressable onPress={onClose} style={styles.sheetClose}><Ionicons name="close" size={22} color={theme.textSecondary} /></Pressable>
-            </View>
-            <View style={[styles.sectionHeader, { borderBottomColor: theme.border }]}>
-              <View style={[styles.sectionIcon, { backgroundColor: Colors.indigo + "18" }]}>
-                <Ionicons name="language" size={16} color={Colors.indigo} />
+    <>
+      <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
+        <Pressable style={styles.modalBackdrop} onPress={onClose}>
+          <Animated.View entering={SlideInDown.springify().damping(20)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
+            <Pressable>
+              <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
+              <View style={styles.sheetHeader}>
+                <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>Settings</Text>
+                <Pressable onPress={onClose} style={styles.sheetClose}><Ionicons name="close" size={22} color={theme.textSecondary} /></Pressable>
               </View>
-              <View style={styles.sectionInfo}>
-                <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>AI Language</Text>
-                <Text style={[styles.sectionDesc, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>Controls transcription, summaries, and chat responses</Text>
+
+              {/* Subscription Row */}
+              <Pressable
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowPaywall(true); }}
+                style={({ pressed }) => [
+                  styles.subscriptionRow,
+                  { backgroundColor: isSubscribed ? Colors.indigo + "0F" : Colors.coral + "0F", borderColor: isSubscribed ? Colors.indigo + "30" : Colors.coral + "30", opacity: pressed ? 0.8 : 1 },
+                ]}
+              >
+                <View style={[styles.subIcon, { backgroundColor: isSubscribed ? Colors.indigo : Colors.coral }]}>
+                  <Ionicons name={isSubscribed ? "star" : "sparkles"} size={18} color="#fff" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.subTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
+                    {isSubscribed ? "Lecto Pro · Active" : "Upgrade to Pro"}
+                  </Text>
+                  <Text style={[styles.subDesc, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
+                    {isSubscribed
+                      ? "Unlimited recordings & all features unlocked"
+                      : `${recordingCount}/${FREE_RECORDING_LIMIT} free recordings used · Tap to unlock`}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={isSubscribed ? Colors.indigo : Colors.coral} />
+              </Pressable>
+
+              <View style={[styles.sectionHeader, { borderBottomColor: theme.border }]}>
+                <View style={[styles.sectionIcon, { backgroundColor: Colors.indigo + "18" }]}>
+                  <Ionicons name="language" size={16} color={Colors.indigo} />
+                </View>
+                <View style={styles.sectionInfo}>
+                  <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>AI Language</Text>
+                  <Text style={[styles.sectionDesc, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>Controls transcription, summaries, and chat responses</Text>
+                </View>
               </View>
-            </View>
-            <ScrollView style={styles.langList} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-              {LANGUAGES.map((lang) => {
-                const isSelected = language.code === lang.code;
-                return (
-                  <Pressable key={lang.code} onPress={() => { Haptics.selectionAsync(); setLanguage(lang); }}
-                    style={({ pressed }) => [styles.langRow, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }, isSelected && { backgroundColor: Colors.indigo + "0E" }]}>
-                    <View style={styles.langBadge}>
-                      <Text style={[styles.langCode, { color: Colors.indigo, fontFamily: "DMSans_700Bold" }]}>{lang.code.toUpperCase()}</Text>
-                    </View>
-                    <View style={styles.langInfo}>
-                      <Text style={[styles.langName, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>{lang.name}</Text>
-                      <Text style={[styles.langNative, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>{lang.nativeName}</Text>
-                    </View>
-                    {isSelected && <Ionicons name="checkmark-circle" size={22} color={Colors.indigo} />}
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </Pressable>
-        </Animated.View>
-      </Pressable>
-    </Modal>
+              <ScrollView style={styles.langList} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+                {LANGUAGES.map((lang) => {
+                  const isSelected = language.code === lang.code;
+                  return (
+                    <Pressable key={lang.code} onPress={() => { Haptics.selectionAsync(); setLanguage(lang); }}
+                      style={({ pressed }) => [styles.langRow, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }, isSelected && { backgroundColor: Colors.indigo + "0E" }]}>
+                      <View style={styles.langBadge}>
+                        <Text style={[styles.langCode, { color: Colors.indigo, fontFamily: "DMSans_700Bold" }]}>{lang.code.toUpperCase()}</Text>
+                      </View>
+                      <View style={styles.langInfo}>
+                        <Text style={[styles.langName, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>{lang.name}</Text>
+                        <Text style={[styles.langNative, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>{lang.nativeName}</Text>
+                      </View>
+                      {isSelected && <Ionicons name="checkmark-circle" size={22} color={Colors.indigo} />}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </Pressable>
+          </Animated.View>
+        </Pressable>
+      </Modal>
+
+      <Paywall visible={showPaywall} onClose={() => setShowPaywall(false)} isDismissible />
+    </>
   );
 }
 
@@ -1026,6 +1062,12 @@ const styles = StyleSheet.create({
   cancelBtnText: { fontSize: 16 },
   confirmDeleteBtn: { flex: 1, flexDirection: "row", gap: 8, paddingVertical: 15, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   confirmDeleteBtnText: { fontSize: 16, color: "#fff" },
+
+  // Subscription row in Settings
+  subscriptionRow: { flexDirection: "row", alignItems: "center", gap: 12, marginHorizontal: 16, marginVertical: 12, padding: 14, borderRadius: 16, borderWidth: 1.5 },
+  subIcon: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  subTitle: { fontSize: 15 },
+  subDesc: { fontSize: 12, marginTop: 2 },
 
   // Settings
   sectionHeader: { flexDirection: "row", alignItems: "flex-start", gap: 12, paddingHorizontal: 20, paddingBottom: 14, borderBottomWidth: StyleSheet.hairlineWidth },

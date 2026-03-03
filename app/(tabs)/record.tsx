@@ -14,6 +14,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { useRecordings } from "@/contexts/RecordingsContext";
 import { useSettings } from "@/contexts/SettingsContext";
+import { useSubscription, FREE_RECORDING_LIMIT } from "@/contexts/SubscriptionContext";
+import Paywall from "@/components/Paywall";
 import { getApiUrl } from "@/lib/query-client";
 import * as FileSystem from "expo-file-system";
 import Animated, {
@@ -67,8 +69,10 @@ export default function RecordScreen() {
   const isDark = colorScheme === "dark";
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
-  const { addRecording } = useRecordings();
+  const { addRecording, recordings } = useRecordings();
   const { language } = useSettings();
+  const { isSubscribed } = useSubscription();
+  const [showPaywall, setShowPaywall] = useState(false);
 
   const [recordState, setRecordState] = useState<RecordState>("idle");
   const [elapsed, setElapsed] = useState(0);
@@ -325,9 +329,17 @@ export default function RecordScreen() {
     buttonScale.value = withSpring(0.92, {}, () => {
       buttonScale.value = withSpring(1);
     });
-    if (recordState === "idle") startRecording();
-    else if (recordState === "recording") pauseRecording();
-    else if (recordState === "paused") resumeRecording();
+    if (recordState === "idle") {
+      if (!isSubscribed && recordings.length >= FREE_RECORDING_LIMIT) {
+        setShowPaywall(true);
+        return;
+      }
+      startRecording();
+    } else if (recordState === "recording") {
+      pauseRecording();
+    } else if (recordState === "paused") {
+      resumeRecording();
+    }
   };
 
   const buttonAnimStyle = useAnimatedStyle(() => ({
@@ -462,6 +474,12 @@ export default function RecordScreen() {
           </Animated.View>
         )}
       </ScrollView>
+
+      <Paywall
+        visible={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        isDismissible={false}
+      />
     </View>
   );
 }
