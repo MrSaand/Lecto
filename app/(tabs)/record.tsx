@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { useRecordings } from "@/contexts/RecordingsContext";
+import { useSettings } from "@/contexts/SettingsContext";
 import { getApiUrl } from "@/lib/query-client";
 import * as FileSystem from "expo-file-system";
 import Animated, {
@@ -67,6 +68,7 @@ export default function RecordScreen() {
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
   const { addRecording } = useRecordings();
+  const { language } = useSettings();
 
   const [recordState, setRecordState] = useState<RecordState>("idle");
   const [elapsed, setElapsed] = useState(0);
@@ -275,7 +277,7 @@ export default function RecordScreen() {
       const response = await fetch(`${baseUrl}api/transcribe`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ audio: base64, filename }),
+        body: JSON.stringify({ audio: base64, filename, language: language.code }),
       });
 
       if (!response.ok) {

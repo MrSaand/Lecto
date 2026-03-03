@@ -17,6 +17,7 @@ import { useLocalSearchParams, router } from "expo-router";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { useRecordings, Recording } from "@/contexts/RecordingsContext";
+import { useSettings } from "@/contexts/SettingsContext";
 import Animated, { FadeIn, FadeInDown, FadeInRight } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { fetch } from "expo/fetch";
@@ -62,6 +63,7 @@ export default function DetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { recordings, deleteRecording } = useRecordings();
+  const { language } = useSettings();
   const recording = recordings.find((r) => r.id === id);
 
   const [activeTab, setActiveTab] = useState<Tab>("summary");
@@ -130,7 +132,7 @@ export default function DetailScreen() {
       const response = await fetch(`${baseUrl}api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
-        body: JSON.stringify({ messages: chatHistory, context }),
+        body: JSON.stringify({ messages: chatHistory, context, language: language.code }),
       });
 
       if (!response.ok) throw new Error("Failed");
