@@ -1,4 +1,5 @@
 import * as Print from "expo-print";
+import * as FileSystem from "expo-file-system";
 import { Platform, Share } from "react-native";
 import { Recording } from "@/contexts/RecordingsContext";
 
@@ -205,25 +206,44 @@ function wrapHtml(title: string, body: string): string {
 }
 
 async function generateAndShare(html: string, title: string): Promise<void> {
+  // Web: use navigator.share if available, otherwise download the file
   if (Platform.OS === "web") {
-    const win = window.open("", "_blank");
-    if (win) {
-      win.document.write(html);
-      win.document.close();
-      win.focus();
-      setTimeout(() => win.print(), 400);
+    const safeTitle = title.replace(/[^a-z0-9]/gi, "_");
+    const blob = new Blob([html], { type: "text/html" });
+
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        const file = new File([blob], `${safeTitle}.html`, { type: "text/html" });
+        await navigator.share({ files: [file], title });
+        return;
+      } catch {
+        // fall through to download
+      }
     }
+
+    // Fallback: download the HTML file
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${safeTitle}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
     return;
   }
 
-  if (Platform.OS === "ios") {
-    const { uri } = await Print.printToFileAsync({ html, base64: false });
-    await Share.share({ url: uri, title });
-    return;
-  }
+  // Native: generate PDF then open the system share sheet
+  const { uri: fileUri } = await Print.printToFileAsync({ html, base64: false });
 
-  // Android: open the system print dialog (user can save/share from there)
-  await Print.printAsync({ html });
+  if (Platform.OS === "android") {
+    // Android requires a content:// URI to avoid FileUriExposedException
+    const contentUri = await FileSystem.getContentUriAsync(fileUri);
+    await Share.share({ url: contentUri, title, message: title });
+  } else {
+    // iOS: file:// URIs work directly with the share sheet
+    await Share.share({ url: fileUri, title });
+  }
 }
 
 export async function shareRecordingAsPdf(rec: Recording): Promise<void> {
