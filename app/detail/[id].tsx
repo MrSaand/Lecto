@@ -8,7 +8,7 @@ import {
   TextInput,
   ScrollView,
   Share,
-  Alert,
+  Modal,
   useColorScheme,
   Platform,
 } from "react-native";
@@ -18,7 +18,7 @@ import { Ionicons, Feather } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { useRecordings, Recording } from "@/contexts/RecordingsContext";
 import { useSettings } from "@/contexts/SettingsContext";
-import Animated, { FadeIn, FadeInDown, FadeInRight } from "react-native-reanimated";
+import Animated, { FadeIn, FadeInDown, FadeInRight, SlideInDown } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { fetch } from "expo/fetch";
 import { getApiUrl } from "@/lib/query-client";
@@ -71,23 +71,22 @@ export default function DetailScreen() {
   const [chatInput, setChatInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [showTyping, setShowTyping] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const inputRef = useRef<TextInput>(null);
 
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
   const bottomPadding = Platform.OS === "web" ? 34 : insets.bottom;
 
   const handleDelete = () => {
-    Alert.alert("Delete Recording", "This recording will be permanently deleted.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          await deleteRecording(id);
-          router.back();
-        },
-      },
-    ]);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    setShowDeleteConfirm(false);
+    await deleteRecording(id);
+    router.back();
   };
 
   const handleShare = async () => {
@@ -418,6 +417,62 @@ export default function DetailScreen() {
           </View>
         </KeyboardAvoidingView>
       )}
+
+      {/* Delete confirmation sheet */}
+      <Modal
+        visible={showDeleteConfirm}
+        transparent
+        animationType="none"
+        onRequestClose={() => setShowDeleteConfirm(false)}
+        statusBarTranslucent
+      >
+        <Pressable
+          style={styles.deleteBackdrop}
+          onPress={() => setShowDeleteConfirm(false)}
+        >
+          <Animated.View
+            entering={SlideInDown.springify().damping(20)}
+            style={[styles.deleteSheet, { backgroundColor: theme.card }]}
+          >
+            <Pressable>
+              <View style={styles.deleteHandle}>
+                <View style={[styles.deleteHandleBar, { backgroundColor: theme.border }]} />
+              </View>
+              <View style={styles.deleteBody}>
+                <View style={[styles.deleteIconCircle, { backgroundColor: Colors.coral + "14" }]}>
+                  <Feather name="trash-2" size={28} color={Colors.coral} />
+                </View>
+                <Text style={[styles.deleteTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
+                  Delete Recording?
+                </Text>
+                <Text style={[styles.deleteRecordingName, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
+                  {recording?.title}
+                </Text>
+                <Text style={[styles.deleteWarning, { color: theme.textTertiary, fontFamily: "DMSans_400Regular" }]}>
+                  This recording and all its notes will be permanently deleted. This cannot be undone.
+                </Text>
+              </View>
+              <View style={styles.deleteButtons}>
+                <Pressable
+                  onPress={() => setShowDeleteConfirm(false)}
+                  style={({ pressed }) => [styles.deleteCancelBtn, { backgroundColor: theme.border, opacity: pressed ? 0.7 : 1 }]}
+                >
+                  <Text style={[styles.deleteCancelText, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>
+                    Cancel
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleDeleteConfirm}
+                  style={({ pressed }) => [styles.deleteConfirmBtn, { backgroundColor: Colors.coral, opacity: pressed ? 0.8 : 1 }]}
+                >
+                  <Feather name="trash-2" size={16} color="#fff" />
+                  <Text style={[styles.deleteConfirmText, { fontFamily: "DMSans_700Bold" }]}>Delete</Text>
+                </Pressable>
+              </View>
+            </Pressable>
+          </Animated.View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -718,4 +773,64 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flexShrink: 0,
   },
+
+  // Delete confirmation sheet
+  deleteBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
+  },
+  deleteSheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 20,
+  },
+  deleteHandle: { alignItems: "center", paddingTop: 12, paddingBottom: 4 },
+  deleteHandleBar: { width: 36, height: 4, borderRadius: 2 },
+  deleteBody: {
+    alignItems: "center",
+    paddingHorizontal: 28,
+    paddingTop: 20,
+    paddingBottom: 8,
+    gap: 10,
+  },
+  deleteIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  deleteTitle: { fontSize: 20, textAlign: "center" },
+  deleteRecordingName: { fontSize: 15, textAlign: "center" },
+  deleteWarning: { fontSize: 13, textAlign: "center", lineHeight: 19, marginTop: 4 },
+  deleteButtons: {
+    flexDirection: "row",
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+  },
+  deleteCancelBtn: {
+    flex: 1,
+    paddingVertical: 15,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  deleteCancelText: { fontSize: 16 },
+  deleteConfirmBtn: {
+    flex: 1,
+    flexDirection: "row",
+    gap: 8,
+    paddingVertical: 15,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  deleteConfirmText: { fontSize: 16, color: "#fff" },
 });

@@ -17,7 +17,7 @@ import { Ionicons, Feather } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { useRecordings, Recording } from "@/contexts/RecordingsContext";
 import { useSettings, LANGUAGES, Language } from "@/contexts/SettingsContext";
-import Animated, { FadeInDown, FadeIn, SlideInDown, SlideOutDown } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeIn, SlideInDown } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 
 function formatDuration(seconds: number): string {
@@ -35,12 +35,10 @@ function RecordingCard({
   item,
   theme,
   onPress,
-  onDeletePress,
 }: {
   item: Recording;
   theme: typeof Colors.light;
   onPress: () => void;
-  onDeletePress: () => void;
 }) {
   const speakerColors = [Colors.coral, Colors.mint, Colors.indigo, Colors.indigoLight];
   return (
@@ -103,92 +101,10 @@ function RecordingCard({
               </Text>
             )}
           </View>
-          <View style={styles.cardActions}>
-            <Pressable
-              onPress={(e) => {
-                e.stopPropagation();
-                onDeletePress();
-              }}
-              hitSlop={12}
-              style={({ pressed }) => [styles.deleteBtn, { opacity: pressed ? 0.6 : 1 }]}
-            >
-              <Feather name="trash-2" size={16} color={Colors.coral} />
-            </Pressable>
-            <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
-          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
         </View>
       </Pressable>
     </Animated.View>
-  );
-}
-
-function DeleteConfirmModal({
-  recording,
-  onCancel,
-  onConfirm,
-  theme,
-}: {
-  recording: Recording | null;
-  onCancel: () => void;
-  onConfirm: () => void;
-  theme: typeof Colors.light;
-}) {
-  const visible = recording !== null;
-  return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onCancel} statusBarTranslucent>
-      <Pressable style={styles.modalBackdrop} onPress={onCancel}>
-        <Animated.View
-          entering={SlideInDown.springify().damping(20)}
-          exiting={SlideOutDown.duration(200)}
-          style={[styles.modalSheet, { backgroundColor: theme.card }]}
-        >
-          <Pressable>
-            <View style={styles.sheetHandle}>
-              <View style={[styles.handleBar, { backgroundColor: theme.border }]} />
-            </View>
-
-            <View style={styles.deleteSheetBody}>
-              <View style={[styles.deleteIconWrap, { backgroundColor: Colors.coral + "14" }]}>
-                <Feather name="trash-2" size={28} color={Colors.coral} />
-              </View>
-              <Text style={[styles.deleteTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
-                Delete Recording?
-              </Text>
-              <Text style={[styles.deleteSubtitle, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
-                {recording?.title}
-              </Text>
-              <Text style={[styles.deleteWarning, { color: theme.textTertiary, fontFamily: "DMSans_400Regular" }]}>
-                This recording and its notes will be permanently deleted. This cannot be undone.
-              </Text>
-            </View>
-
-            <View style={styles.deleteActions}>
-              <Pressable
-                onPress={onCancel}
-                style={({ pressed }) => [
-                  styles.cancelBtn,
-                  { backgroundColor: theme.border, opacity: pressed ? 0.7 : 1 },
-                ]}
-              >
-                <Text style={[styles.cancelBtnText, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>
-                  Cancel
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={onConfirm}
-                style={({ pressed }) => [
-                  styles.confirmDeleteBtn,
-                  { backgroundColor: Colors.coral, opacity: pressed ? 0.8 : 1 },
-                ]}
-              >
-                <Feather name="trash-2" size={16} color="#fff" />
-                <Text style={[styles.confirmDeleteBtnText, { fontFamily: "DMSans_700Bold" }]}>Delete</Text>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Animated.View>
-      </Pressable>
-    </Modal>
   );
 }
 
@@ -213,7 +129,6 @@ function SettingsModal({
       <Pressable style={styles.modalBackdrop} onPress={onClose}>
         <Animated.View
           entering={SlideInDown.springify().damping(20)}
-          exiting={SlideOutDown.duration(200)}
           style={[styles.modalSheet, { backgroundColor: theme.card }]}
         >
           <Pressable>
@@ -291,11 +206,10 @@ export default function LibraryScreen() {
   const isDark = colorScheme === "dark";
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
-  const { recordings, deleteRecording, isLoading } = useRecordings();
+  const { recordings, isLoading } = useRecordings();
   const { language } = useSettings();
   const [search, setSearch] = useState("");
   const [showSettings, setShowSettings] = useState(false);
-  const [pendingDelete, setPendingDelete] = useState<Recording | null>(null);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return recordings;
@@ -309,13 +223,6 @@ export default function LibraryScreen() {
   }, [recordings, search]);
 
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
-
-  const handleDeleteConfirm = async () => {
-    if (!pendingDelete) return;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    await deleteRecording(pendingDelete.id);
-    setPendingDelete(null);
-  };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -395,10 +302,6 @@ export default function LibraryScreen() {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 router.push({ pathname: "/detail/[id]", params: { id: item.id } });
               }}
-              onDeletePress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                setPendingDelete(item);
-              }}
             />
           )}
           contentContainerStyle={[
@@ -409,13 +312,6 @@ export default function LibraryScreen() {
         />
       )}
 
-      <DeleteConfirmModal
-        recording={pendingDelete}
-        onCancel={() => setPendingDelete(null)}
-        onConfirm={handleDeleteConfirm}
-        theme={theme}
-      />
-
       <SettingsModal visible={showSettings} onClose={() => setShowSettings(false)} theme={theme} />
     </View>
   );
@@ -423,15 +319,8 @@ export default function LibraryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
+  header: { paddingHorizontal: 20, paddingBottom: 16 },
+  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   appName: { fontSize: 32, letterSpacing: -0.5 },
   subtitle: { fontSize: 14, marginTop: 2 },
   settingsBtn: {
@@ -478,62 +367,26 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   cardHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
-  waveIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cardMeta: {
-    flex: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
+  waveIcon: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  cardMeta: { flex: 1, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   cardDate: { fontSize: 12 },
   durationBadge: { flexDirection: "row", alignItems: "center", gap: 4 },
   cardDuration: { fontSize: 12 },
   cardTitle: { fontSize: 16, lineHeight: 22 },
   cardPreview: { fontSize: 13, lineHeight: 18 },
-  cardFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 2,
-  },
+  cardFooter: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 2 },
   speakerPills: { flexDirection: "row", flexWrap: "wrap", gap: 6, flex: 1 },
-  speakerPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 20,
-  },
+  speakerPill: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
   speakerDot: { width: 5, height: 5, borderRadius: 3 },
   speakerPillText: { fontSize: 11 },
   moreSpeakers: { fontSize: 11, alignSelf: "center" },
-  cardActions: { flexDirection: "row", alignItems: "center", gap: 12 },
-  deleteBtn: { padding: 4 },
   emptyState: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 40 },
-  emptyIconWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-  },
+  emptyIconWrap: { width: 80, height: 80, borderRadius: 24, alignItems: "center", justifyContent: "center", marginBottom: 8 },
   emptyTitle: { fontSize: 20, textAlign: "center" },
   emptyText: { fontSize: 14, textAlign: "center", lineHeight: 20 },
 
-  // Shared modal styles
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
-    justifyContent: "flex-end",
-  },
+  // Settings modal
+  modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },
   modalSheet: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -546,97 +399,17 @@ const styles = StyleSheet.create({
   },
   sheetHandle: { alignItems: "center", paddingTop: 12, paddingBottom: 4 },
   handleBar: { width: 36, height: 4, borderRadius: 2 },
-
-  // Delete confirm sheet
-  deleteSheetBody: {
-    alignItems: "center",
-    paddingHorizontal: 28,
-    paddingTop: 20,
-    paddingBottom: 8,
-    gap: 10,
-  },
-  deleteIconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-  },
-  deleteTitle: { fontSize: 20, textAlign: "center" },
-  deleteSubtitle: { fontSize: 15, textAlign: "center" },
-  deleteWarning: { fontSize: 13, textAlign: "center", lineHeight: 19, marginTop: 4 },
-  deleteActions: {
-    flexDirection: "row",
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 24,
-  },
-  cancelBtn: {
-    flex: 1,
-    paddingVertical: 15,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cancelBtnText: { fontSize: 16 },
-  confirmDeleteBtn: {
-    flex: 1,
-    flexDirection: "row",
-    gap: 8,
-    paddingVertical: 15,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  confirmDeleteBtnText: { fontSize: 16, color: "#fff" },
-
-  // Settings sheet
-  sheetHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
+  sheetHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 16 },
   sheetTitle: { fontSize: 20 },
   sheetClose: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingBottom: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  sectionIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 2,
-  },
+  sectionHeader: { flexDirection: "row", alignItems: "flex-start", gap: 12, paddingHorizontal: 20, paddingBottom: 14, borderBottomWidth: StyleSheet.hairlineWidth },
+  sectionIcon: { width: 32, height: 32, borderRadius: 8, alignItems: "center", justifyContent: "center", marginTop: 2 },
   sectionInfo: { flex: 1, gap: 3 },
   sectionTitle: { fontSize: 15 },
   sectionDesc: { fontSize: 12, lineHeight: 17 },
   langList: { maxHeight: 400 },
-  langRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    paddingHorizontal: 20,
-    paddingVertical: 13,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  langBadge: {
-    width: 42,
-    height: 28,
-    borderRadius: 6,
-    backgroundColor: Colors.indigo + "14",
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  langRow: { flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 20, paddingVertical: 13, borderBottomWidth: StyleSheet.hairlineWidth },
+  langBadge: { width: 42, height: 28, borderRadius: 6, backgroundColor: Colors.indigo + "14", alignItems: "center", justifyContent: "center" },
   langCode: { fontSize: 11, letterSpacing: 0.5 },
   langInfo: { flex: 1 },
   langName: { fontSize: 15 },
