@@ -242,7 +242,7 @@ export default function RecordScreen() {
       await activateKeepAwakeAsync();
 
       const base64 = await FileSystem.readAsStringAsync(pending.uri, {
-        encoding: FileSystem.EncodingType.Base64,
+        encoding: "base64",
       });
       const filename = pending.uri.split("/").pop() || "recording.m4a";
 
@@ -343,7 +343,7 @@ export default function RecordScreen() {
     if (!info.exists) throw new Error("Recording file not found. Please try again.");
     if ((info as any).size === 0) throw new Error("Recording is empty. Please try again.");
     const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: FileSystem.EncodingType.Base64,
+      encoding: "base64",
     });
     if (!base64 || typeof base64 !== "string" || base64.length === 0) {
       throw new Error("Failed to read audio data. Please try again.");
