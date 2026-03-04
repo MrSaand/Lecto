@@ -19,7 +19,7 @@ import Paywall from "@/components/Paywall";
 import { getApiUrl } from "@/lib/query-client";
 import * as FileSystem from "expo-file-system";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { activateKeepAwakeAsync, deactivateKeepAwakeAsync } from "expo-keep-awake";
+import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -284,7 +284,7 @@ export default function RecordScreen() {
       setStatusMsg("");
       Alert.alert("Error", "Could not finish the lecture: " + (e?.message || String(e)));
     } finally {
-      await deactivateKeepAwakeAsync();
+      await deactivateKeepAwake();
     }
   };
 
@@ -435,7 +435,7 @@ export default function RecordScreen() {
       setStatusMsg("");
       Alert.alert("Error", e?.message || "Could not process lecture. Please try again.");
     } finally {
-      await deactivateKeepAwakeAsync();
+      await deactivateKeepAwake();
     }
   };
 
