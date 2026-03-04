@@ -17,7 +17,8 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.lecto.app",
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "Lecto needs microphone access to record your meetings and lectures."
+        "NSMicrophoneUsageDescription": "Lecto needs microphone access to record your meetings and lectures.",
+        "UIBackgroundModes": ["audio"]
       }
     },
     "android": {

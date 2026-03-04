@@ -110,13 +110,22 @@ Return ONLY valid JSON with no markdown or code fences.`;
       res.flushHeaders();
 
       const systemMessage = context
-        ? `You are an AI assistant helping a user understand their recording. You MUST respond in ${langName} only.
+        ? `You are an AI assistant helping a user understand their lecture. You MUST respond in ${langName} only.
 
-Recording context:
+Lecture context:
 ${context}
 
-Answer questions specifically about this content. Be helpful, concise, and accurate. Always respond in ${langName}.`
-        : `You are a helpful AI assistant. Always respond in ${langName}.`;
+Answer questions specifically about this content. Be helpful, concise, and accurate. Always respond in ${langName}.
+
+FORMATTING RULES — follow these exactly:
+- Use plain text only. No markdown whatsoever.
+- Never use hashtags (#, ##, ###), asterisks (* or **), underscores (_ or __), backticks, or any other markdown symbols.
+- For bullet points use a simple dash: -
+- For numbered lists use: 1. 2. 3.
+- Write math and numbers in plain readable language. Write "half" not "1/2", "squared" not "^2", "the total is 45" not "= 45", "about 3.14" not "pi equals 3.14159...".
+- No LaTeX or equation notation of any kind.
+- Keep responses conversational and easy to read aloud.`
+        : `You are a helpful AI assistant. Always respond in ${langName}. Use plain text only — no markdown, no asterisks, no hashtags, no special formatting symbols.`;
 
       const stream = await openai.chat.completions.create({
         model: "gpt-5.2",

@@ -18,6 +18,8 @@ import { useSubscription, FREE_RECORDING_LIMIT } from "@/contexts/SubscriptionCo
 import Paywall from "@/components/Paywall";
 import { getApiUrl } from "@/lib/query-client";
 import * as FileSystem from "expo-file-system";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { activateKeepAwakeAsync, deactivateKeepAwakeAsync } from "expo-keep-awake";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -30,6 +32,8 @@ import Animated, {
 import * as Haptics from "expo-haptics";
 import { Audio } from "expo-av";
 import { router } from "expo-router";
+
+const PENDING_KEY = "@lecto_pending_lecture";
 
 type RecordState = "idle" | "recording" | "paused" | "processing";
 
@@ -191,6 +195,99 @@ export default function RecordScreen() {
     });
   };
 
+  // ─── Pending lecture recovery ───────────────────────────────────────────────
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    AsyncStorage.getItem(PENDING_KEY).then(async (val) => {
+      if (!val) return;
+      try {
+        const pending = JSON.parse(val);
+        const info = await FileSystem.getInfoAsync(pending.uri);
+        if (!info.exists) {
+          await AsyncStorage.removeItem(PENDING_KEY);
+          return;
+        }
+        Alert.alert(
+          "Unfinished Lecture",
+          "A previous lecture was interrupted before it could be saved. Would you like to finish processing it?",
+          [
+            {
+              text: "Discard",
+              style: "destructive",
+              onPress: async () => {
+                await AsyncStorage.removeItem(PENDING_KEY);
+                await FileSystem.deleteAsync(pending.uri, { idempotent: true });
+              },
+            },
+            { text: "Finish", onPress: () => retryPendingLecture(pending) },
+          ],
+          { cancelable: false }
+        );
+      } catch {
+        await AsyncStorage.removeItem(PENDING_KEY);
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const retryPendingLecture = async (pending: {
+    uri: string;
+    duration: number;
+    date: string;
+    language: string;
+  }) => {
+    try {
+      setRecordState("processing");
+      setStatusMsg("Resuming previous lecture...");
+      await activateKeepAwakeAsync();
+
+      const base64 = await FileSystem.readAsStringAsync(pending.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      const filename = pending.uri.split("/").pop() || "recording.m4a";
+
+      setStatusMsg("Transcribing with AI...");
+      const baseUrl = getApiUrl();
+      const response = await fetch(`${baseUrl}api/transcribe`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ audio: base64, filename, language: pending.language }),
+      });
+
+      if (!response.ok) throw new Error("Transcription failed");
+
+      setStatusMsg("Generating notes...");
+      const data = await response.json();
+
+      const newRecording = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        title: data.title || "Untitled Lecture",
+        date: pending.date,
+        duration: pending.duration,
+        summary: data.summary || [],
+        actionItems: data.actionItems || [],
+        speakers: data.speakers || ["Speaker 1"],
+        transcript: data.transcript || [],
+        rawTranscript: data.rawTranscript || "",
+        keyTopics: data.keyTopics || [],
+        folderId: null,
+      };
+
+      await addRecording(newRecording);
+      await AsyncStorage.removeItem(PENDING_KEY);
+      await FileSystem.deleteAsync(pending.uri, { idempotent: true });
+      setRecordState("idle");
+      setStatusMsg("");
+      router.push({ pathname: "/detail/[id]", params: { id: newRecording.id } });
+    } catch (e: any) {
+      setRecordState("idle");
+      setStatusMsg("");
+      Alert.alert("Error", "Could not finish the lecture: " + (e?.message || String(e)));
+    } finally {
+      await deactivateKeepAwakeAsync();
+    }
+  };
+
   // ─── Native recording via expo-av ──────────────────────────────────────────
   const startNativeRecording = async () => {
     const { status } = await Audio.requestPermissionsAsync();
@@ -199,7 +296,11 @@ export default function RecordScreen() {
       return;
     }
     try {
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: true,
+      });
       const { recording } = await Audio.Recording.createAsync(
         Audio.RecordingOptionsPresets.HIGH_QUALITY
       );
@@ -232,7 +333,7 @@ export default function RecordScreen() {
     } catch (e) {}
   };
 
-  const stopNativeRecording = async (): Promise<{ base64: string; filename: string }> => {
+  const stopNativeRecording = async (): Promise<{ base64: string; filename: string; uri: string }> => {
     if (!recordingRef.current) throw new Error("No recording in progress");
     await recordingRef.current.stopAndUnloadAsync();
     const uri = recordingRef.current.getURI();
@@ -242,7 +343,7 @@ export default function RecordScreen() {
       encoding: FileSystem.EncodingType.Base64,
     });
     const filename = uri.split("/").pop() || "recording.m4a";
-    return { base64, filename };
+    return { base64, filename, uri };
   };
 
   // ─── Unified actions ────────────────────────────────────────────────────────
@@ -260,20 +361,30 @@ export default function RecordScreen() {
       setRecordState("processing");
       stopTimer();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await activateKeepAwakeAsync();
 
       let base64: string;
       let filename: string;
+      const recordedAt = new Date().toISOString();
+      const recordedDuration = elapsedRef.current;
 
       if (Platform.OS === "web") {
-        setStatusMsg("Stopping recording...");
+        setStatusMsg("Stopping lecture...");
         const result = await stopWebRecording();
         base64 = result.base64;
         filename = result.filename;
       } else {
-        setStatusMsg("Stopping recording...");
+        setStatusMsg("Stopping lecture...");
         const result = await stopNativeRecording();
         base64 = result.base64;
         filename = result.filename;
+        // Save to AsyncStorage BEFORE the network call so we can recover if interrupted
+        await AsyncStorage.setItem(PENDING_KEY, JSON.stringify({
+          uri: result.uri,
+          duration: recordedDuration,
+          date: recordedAt,
+          language: language.code,
+        }));
       }
 
       setStatusMsg("Transcribing with AI...");
@@ -293,14 +404,14 @@ export default function RecordScreen() {
         throw new Error(errMsg);
       }
 
-      setStatusMsg("Generating summary...");
+      setStatusMsg("Generating notes...");
       const data = await response.json();
 
       const newRecording = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         title: data.title || "Untitled Lecture",
-        date: new Date().toISOString(),
-        duration: elapsedRef.current,
+        date: recordedAt,
+        duration: recordedDuration,
         summary: data.summary || [],
         actionItems: data.actionItems || [],
         speakers: data.speakers || ["Speaker 1"],
@@ -311,6 +422,7 @@ export default function RecordScreen() {
       };
 
       await addRecording(newRecording);
+      await AsyncStorage.removeItem(PENDING_KEY);
       setRecordState("idle");
       setElapsed(0);
       elapsedRef.current = 0;
@@ -321,7 +433,9 @@ export default function RecordScreen() {
       console.error("Stop error:", e?.message || String(e));
       setRecordState("idle");
       setStatusMsg("");
-      Alert.alert("Error", e?.message || "Could not process recording. Please try again.");
+      Alert.alert("Error", e?.message || "Could not process lecture. Please try again.");
+    } finally {
+      await deactivateKeepAwakeAsync();
     }
   };
 
