@@ -39,18 +39,27 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
   const isDark = colorScheme === "dark";
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
-  const { monthlyPackage, yearlyPackage, purchaseMonthly, purchaseYearly, restorePurchases } = useSubscription();
+  const { monthlyPackage, yearlyPackage, purchaseMonthly, purchaseYearly, restorePurchases, refresh } = useSubscription();
 
   const [selectedPlan, setSelectedPlan] = useState<"monthly" | "yearly">("yearly");
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [status, setStatus] = useState<StatusType>("");
 
+  const isWeb = Platform.OS === "web";
+  const packagesLoaded = !!(monthlyPackage || yearlyPackage);
+
   const monthlyPrice = monthlyPackage?.product.priceString ?? "$9.99";
   const yearlyPrice = yearlyPackage?.product.priceString ?? "$49.99";
   const monthlyEquiv = yearlyPackage ? `$${(yearlyPackage.product.price / 12).toFixed(2)}` : "$4.17";
 
   const handlePurchase = async () => {
+    if (isWeb) return;
+    if (!packagesLoaded) {
+      await refresh();
+      setStatus("error");
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsPurchasing(true);
     setStatus("");
@@ -76,6 +85,7 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
   };
 
   const handleRestore = async () => {
+    if (isWeb) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setIsRestoring(true);
     setStatus("");
@@ -98,7 +108,7 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
   const statusText = () => {
     if (status === "success") return "Subscription activated!";
     if (status === "cancelled") return "Purchase cancelled.";
-    if (status === "error") return "Something went wrong. Please try again.";
+    if (status === "error") return "Purchase unavailable. Try a promo code or restore purchases.";
     return "";
   };
 
@@ -109,7 +119,7 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
     return theme.textSecondary;
   };
 
-  const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
+  const bottomInset = isWeb ? 34 : insets.bottom;
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
@@ -203,43 +213,54 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
             ) : null}
 
             <Animated.View entering={FadeInDown.delay(250).duration(400)} style={styles.ctaSection}>
-              <Pressable
-                onPress={handlePurchase}
-                disabled={isPurchasing || isRestoring}
-                style={({ pressed }) => [
-                  styles.ctaBtn,
-                  { backgroundColor: Colors.indigo, opacity: pressed || isPurchasing ? 0.85 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] },
-                ]}
-              >
-                {isPurchasing ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <>
-                    <Ionicons name="sparkles" size={18} color="#fff" />
-                    <Text style={[styles.ctaBtnText, { fontFamily: "DMSans_700Bold" }]}>
-                      Subscribe {selectedPlan === "yearly" ? `· ${yearlyPrice}/yr` : `· ${monthlyPrice}/mo`}
-                    </Text>
-                  </>
-                )}
-              </Pressable>
-
-              <Pressable
-                onPress={handleRestore}
-                disabled={isPurchasing || isRestoring}
-                style={({ pressed }) => [styles.restoreBtn, { opacity: pressed || isRestoring ? 0.6 : 1 }]}
-              >
-                {isRestoring ? (
-                  <ActivityIndicator color={theme.textTertiary} size="small" />
-                ) : (
-                  <Text style={[styles.restoreBtnText, { color: theme.textTertiary, fontFamily: "DMSans_400Regular" }]}>
-                    Restore purchases
+              {isWeb ? (
+                <View style={[styles.webNotice, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                  <Ionicons name="phone-portrait-outline" size={22} color={Colors.indigo} />
+                  <Text style={[styles.webNoticeText, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>
+                    Subscriptions are available on the iOS and Android apps. Use a promo code below if you have one.
                   </Text>
-                )}
-              </Pressable>
+                </View>
+              ) : (
+                <>
+                  <Pressable
+                    onPress={handlePurchase}
+                    disabled={isPurchasing || isRestoring}
+                    style={({ pressed }) => [
+                      styles.ctaBtn,
+                      { backgroundColor: Colors.indigo, opacity: pressed || isPurchasing ? 0.85 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] },
+                    ]}
+                  >
+                    {isPurchasing ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <>
+                        <Ionicons name="sparkles" size={18} color="#fff" />
+                        <Text style={[styles.ctaBtnText, { fontFamily: "DMSans_700Bold" }]}>
+                          Subscribe {selectedPlan === "yearly" ? `· ${yearlyPrice}/yr` : `· ${monthlyPrice}/mo`}
+                        </Text>
+                      </>
+                    )}
+                  </Pressable>
 
-              <Text style={[styles.legalText, { color: theme.textTertiary, fontFamily: "DMSans_400Regular" }]}>
-                Subscription renews automatically. Cancel anytime in your account settings.
-              </Text>
+                  <Pressable
+                    onPress={handleRestore}
+                    disabled={isPurchasing || isRestoring}
+                    style={({ pressed }) => [styles.restoreBtn, { opacity: pressed || isRestoring ? 0.6 : 1 }]}
+                  >
+                    {isRestoring ? (
+                      <ActivityIndicator color={theme.textTertiary} size="small" />
+                    ) : (
+                      <Text style={[styles.restoreBtnText, { color: theme.textTertiary, fontFamily: "DMSans_400Regular" }]}>
+                        Restore purchases
+                      </Text>
+                    )}
+                  </Pressable>
+
+                  <Text style={[styles.legalText, { color: theme.textTertiary, fontFamily: "DMSans_400Regular" }]}>
+                    Subscription renews automatically. Cancel anytime in your account settings.
+                  </Text>
+                </>
+              )}
             </Animated.View>
           </ScrollView>
         </Animated.View>
@@ -299,4 +320,6 @@ const styles = StyleSheet.create({
   restoreBtn: { alignItems: "center", paddingVertical: 8 },
   restoreBtnText: { fontSize: 14 },
   legalText: { fontSize: 11, textAlign: "center", lineHeight: 16, paddingHorizontal: 8, paddingBottom: 4 },
+  webNotice: { flexDirection: "row", alignItems: "center", gap: 12, padding: 16, borderRadius: 16, borderWidth: 1 },
+  webNoticeText: { flex: 1, fontSize: 14, lineHeight: 20 },
 });
