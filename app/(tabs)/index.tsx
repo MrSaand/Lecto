@@ -20,7 +20,7 @@ import { useRecordings, Recording, Folder } from "@/contexts/RecordingsContext";
 import { useSettings, LANGUAGES, Language } from "@/contexts/SettingsContext";
 import { useSubscription, FREE_RECORDING_LIMIT } from "@/contexts/SubscriptionContext";
 import Paywall from "@/components/Paywall";
-import Animated, { FadeInDown, FadeIn, SlideInDown, FadeInUp } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeIn, FadeInUp } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 
 function formatDuration(seconds: number): string {
@@ -257,8 +257,8 @@ function CreateFolderModal({
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onCancel} statusBarTranslucent>
       <Pressable style={styles.modalBackdrop} onPress={onCancel}>
-        <Animated.View entering={SlideInDown.springify().damping(20)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
-          <Pressable>
+        <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
+          <View onStartShouldSetResponder={() => true}>
             <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
             <View style={styles.sheetHeader}>
               <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>New Folder</Text>
@@ -288,7 +288,7 @@ function CreateFolderModal({
                 </Text>
               </Pressable>
             </View>
-          </Pressable>
+          </View>
         </Animated.View>
       </Pressable>
     </Modal>
@@ -322,8 +322,8 @@ function RenameModal({
   return (
     <Modal visible={!!target} transparent animationType="none" onRequestClose={onCancel} statusBarTranslucent>
       <Pressable style={styles.modalBackdrop} onPress={onCancel}>
-        <Animated.View entering={SlideInDown.springify().damping(20)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
-          <Pressable>
+        <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
+          <View onStartShouldSetResponder={() => true}>
             <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
             <View style={styles.sheetHeader}>
               <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
@@ -355,7 +355,7 @@ function RenameModal({
                 </Text>
               </Pressable>
             </View>
-          </Pressable>
+          </View>
         </Animated.View>
       </Pressable>
     </Modal>
@@ -385,8 +385,8 @@ function OptionsSheet({
   return (
     <Modal visible={!!target} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <Pressable style={styles.modalBackdrop} onPress={onClose}>
-        <Animated.View entering={SlideInDown.springify().damping(20)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
-          <Pressable>
+        <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
+          <View onStartShouldSetResponder={() => true}>
             <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
             <View style={styles.sheetHeader}>
               <View style={styles.optionsTargetInfo}>
@@ -431,7 +431,7 @@ function OptionsSheet({
               </Pressable>
             </View>
             <View style={{ height: 24 }} />
-          </Pressable>
+          </View>
         </Animated.View>
       </Pressable>
     </Modal>
@@ -455,8 +455,8 @@ function DeleteConfirmModal({
   return (
     <Modal visible={!!target} transparent animationType="none" onRequestClose={onCancel} statusBarTranslucent>
       <Pressable style={styles.modalBackdrop} onPress={onCancel}>
-        <Animated.View entering={SlideInDown.springify().damping(20)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
-          <Pressable>
+        <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
+          <View onStartShouldSetResponder={() => true}>
             <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
             <View style={styles.deleteSheetBody}>
               <View style={[styles.deleteIconWrap, { backgroundColor: Colors.coral + "14" }]}>
@@ -483,7 +483,7 @@ function DeleteConfirmModal({
                 <Text style={[styles.confirmDeleteBtnText, { fontFamily: "DMSans_700Bold" }]}>Delete</Text>
               </Pressable>
             </View>
-          </Pressable>
+          </View>
         </Animated.View>
       </Pressable>
     </Modal>
@@ -496,8 +496,8 @@ function LanguagePickerModal({ visible, onClose, theme }: { visible: boolean; on
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <Pressable style={styles.modalBackdrop} onPress={onClose}>
-        <Animated.View entering={SlideInDown.springify().damping(20)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
-          <Pressable>
+        <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
+          <View onStartShouldSetResponder={() => true}>
             <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
             <View style={styles.sheetHeader}>
               <Pressable onPress={onClose} style={styles.sheetClose}>
@@ -530,7 +530,7 @@ function LanguagePickerModal({ visible, onClose, theme }: { visible: boolean; on
                 );
               })}
             </ScrollView>
-          </Pressable>
+          </View>
         </Animated.View>
       </Pressable>
     </Modal>
@@ -564,8 +564,8 @@ function PromoCodeModal({ visible, onClose, theme }: { visible: boolean; onClose
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose} statusBarTranslucent>
       <Pressable style={styles.modalBackdrop} onPress={handleClose}>
-        <Animated.View entering={SlideInDown.springify().damping(20)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
-          <Pressable>
+        <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
+          <View onStartShouldSetResponder={() => true}>
             <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
             <View style={styles.sheetHeader}>
               <Pressable onPress={handleClose} style={styles.sheetClose}>
@@ -615,7 +615,7 @@ function PromoCodeModal({ visible, onClose, theme }: { visible: boolean; onClose
                 </Text>
               </Pressable>
             </View>
-          </Pressable>
+          </View>
         </Animated.View>
       </Pressable>
     </Modal>
@@ -647,8 +647,8 @@ function SettingsModal({ visible, onClose, theme }: { visible: boolean; onClose:
     <>
       <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
         <Pressable style={styles.modalBackdrop} onPress={onClose}>
-          <Animated.View entering={SlideInDown.springify().damping(20)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
-            <Pressable>
+          <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
+            <View onStartShouldSetResponder={() => true}>
               <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
               <View style={styles.sheetHeader}>
                 <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>Settings</Text>
@@ -735,7 +735,7 @@ function SettingsModal({ visible, onClose, theme }: { visible: boolean; onClose:
                   </View>
                 </View>
               </ScrollView>
-            </Pressable>
+            </View>
           </Animated.View>
         </Pressable>
       </Modal>

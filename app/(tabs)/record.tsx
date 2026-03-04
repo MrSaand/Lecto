@@ -339,9 +339,15 @@ export default function RecordScreen() {
     const uri = recordingRef.current.getURI();
     recordingRef.current = null;
     if (!uri) throw new Error("Recording URI is unavailable");
+    const info = await FileSystem.getInfoAsync(uri);
+    if (!info.exists) throw new Error("Recording file not found. Please try again.");
+    if ((info as any).size === 0) throw new Error("Recording is empty. Please try again.");
     const base64 = await FileSystem.readAsStringAsync(uri, {
       encoding: FileSystem.EncodingType.Base64,
     });
+    if (!base64 || typeof base64 !== "string" || base64.length === 0) {
+      throw new Error("Failed to read audio data. Please try again.");
+    }
     const filename = uri.split("/").pop() || "recording.m4a";
     return { base64, filename, uri };
   };
