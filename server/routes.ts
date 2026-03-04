@@ -3,6 +3,7 @@ import { createServer, type Server } from "node:http";
 import OpenAI, { toFile } from "openai";
 import { Buffer } from "node:buffer";
 import express from "express";
+import { PROMO_CODES } from "./promo-codes";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -317,6 +318,24 @@ FORMATTING RULES — follow these exactly:
       console.error("PDF error:", error);
       res.status(500).json({ error: error.message || "PDF generation failed" });
     }
+  });
+
+  app.post("/api/promo/redeem", (req, res) => {
+    const { code } = req.body;
+    if (!code || typeof code !== "string") {
+      return res.status(400).json({ valid: false, message: "Please enter a code." });
+    }
+    const normalized = code.trim().toUpperCase();
+    const promo = PROMO_CODES[normalized];
+    if (!promo) {
+      return res.status(200).json({ valid: false, message: "That code doesn't exist. Please check it and try again." });
+    }
+    const daysText = promo.durationDays === -1 ? "lifetime" : `${promo.durationDays} day${promo.durationDays === 1 ? "" : "s"}`;
+    return res.status(200).json({
+      valid: true,
+      durationDays: promo.durationDays,
+      message: `Code applied! You now have ${daysText} of Lecto Pro.`,
+    });
   });
 
   const httpServer = createServer(app);

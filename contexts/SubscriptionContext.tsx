@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo, ReactNo
 import Purchases, { CustomerInfo, PurchasesPackage, PurchasesOffering } from "react-native-purchases";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
+import { getApiUrl } from "@/lib/query-client";
 
 const API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY ?? "";
 const ENTITLEMENT_ID = "premium";
@@ -23,6 +24,7 @@ interface SubscriptionContextValue extends SubscriptionState {
   purchasePackage: (pkg: PurchasesPackage) => Promise<"success" | "cancelled" | "error">;
   restorePurchases: () => Promise<boolean>;
   refresh: () => Promise<void>;
+  redeemPromoCode: (code: string) => Promise<{ success: boolean; message: string; durationDays?: number }>;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextValue | null>(null);
@@ -35,9 +37,13 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [monthlyPackage, setMonthlyPackage] = useState<PurchasesPackage | null>(null);
   const [yearlyPackage, setYearlyPackage] = useState<PurchasesPackage | null>(null);
 
-  const grantSubscription = async () => {
+  const grantSubscription = async (expiresAt?: number) => {
     setIsSubscribed(true);
-    await AsyncStorage.setItem(LOCAL_SUB_KEY, JSON.stringify({ subscribed: true, grantedAt: Date.now() }));
+    await AsyncStorage.setItem(LOCAL_SUB_KEY, JSON.stringify({
+      subscribed: true,
+      grantedAt: Date.now(),
+      ...(expiresAt != null ? { expiresAt } : {}),
+    }));
   };
 
   const revokeSubscription = async () => {
@@ -51,7 +57,13 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         const localData = await AsyncStorage.getItem(LOCAL_SUB_KEY);
         if (localData) {
           const parsed = JSON.parse(localData);
-          if (parsed.subscribed) setIsSubscribed(true);
+          if (parsed.subscribed) {
+            if (parsed.expiresAt && Date.now() > parsed.expiresAt) {
+              await AsyncStorage.removeItem(LOCAL_SUB_KEY);
+            } else {
+              setIsSubscribed(true);
+            }
+          }
         }
       } catch {}
 
@@ -145,11 +157,33 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const redeemPromoCode = async (code: string): Promise<{ success: boolean; message: string; durationDays?: number }> => {
+    try {
+      const baseUrl = getApiUrl();
+      const response = await fetch(`${baseUrl}api/promo/redeem`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: code.trim() }),
+      });
+      const data = await response.json();
+      if (data.valid) {
+        const expiresAt = data.durationDays === -1
+          ? undefined
+          : Date.now() + data.durationDays * 24 * 60 * 60 * 1000;
+        await grantSubscription(expiresAt);
+        return { success: true, message: data.message, durationDays: data.durationDays };
+      }
+      return { success: false, message: data.message };
+    } catch {
+      return { success: false, message: "Could not connect to the server. Please try again." };
+    }
+  };
+
   const value = useMemo(
     () => ({
       isSubscribed, isLoading, customerInfo, offering,
       monthlyPackage, yearlyPackage,
-      purchaseMonthly, purchaseYearly, purchasePackage, restorePurchases, refresh,
+      purchaseMonthly, purchaseYearly, purchasePackage, restorePurchases, refresh, redeemPromoCode,
     }),
     [isSubscribed, isLoading, customerInfo, offering, monthlyPackage, yearlyPackage]
   );

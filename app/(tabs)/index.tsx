@@ -490,13 +490,158 @@ function DeleteConfirmModal({
   );
 }
 
+// ─── Language Picker Sub-Sheet ─────────────────────────────────────────────────
+function LanguagePickerModal({ visible, onClose, theme }: { visible: boolean; onClose: () => void; theme: typeof Colors.light }) {
+  const { language, setLanguage } = useSettings();
+  return (
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
+      <Pressable style={styles.modalBackdrop} onPress={onClose}>
+        <Animated.View entering={SlideInDown.springify().damping(20)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
+          <Pressable>
+            <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
+            <View style={styles.sheetHeader}>
+              <Pressable onPress={onClose} style={styles.sheetClose}>
+                <Ionicons name="chevron-down" size={22} color={theme.textSecondary} />
+              </Pressable>
+              <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>AI Language</Text>
+              <View style={styles.sheetClose} />
+            </View>
+            <Text style={[styles.settingsHint, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
+              Controls transcription, summaries, and chat
+            </Text>
+            <ScrollView style={styles.langList} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+              {LANGUAGES.map((lang) => {
+                const isSelected = language.code === lang.code;
+                return (
+                  <Pressable
+                    key={lang.code}
+                    onPress={() => { Haptics.selectionAsync(); setLanguage(lang); onClose(); }}
+                    style={({ pressed }) => [styles.langRow, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }, isSelected && { backgroundColor: Colors.indigo + "0E" }]}
+                  >
+                    <View style={styles.langBadge}>
+                      <Text style={[styles.langCode, { color: Colors.indigo, fontFamily: "DMSans_700Bold" }]}>{lang.code.toUpperCase()}</Text>
+                    </View>
+                    <View style={styles.langInfo}>
+                      <Text style={[styles.langName, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>{lang.name}</Text>
+                      <Text style={[styles.langNative, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>{lang.nativeName}</Text>
+                    </View>
+                    {isSelected && <Ionicons name="checkmark-circle" size={22} color={Colors.indigo} />}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </Pressable>
+        </Animated.View>
+      </Pressable>
+    </Modal>
+  );
+}
+
+// ─── Promo Code Sub-Sheet ──────────────────────────────────────────────────────
+function PromoCodeModal({ visible, onClose, theme }: { visible: boolean; onClose: () => void; theme: typeof Colors.light }) {
+  const { redeemPromoCode } = useSubscription();
+  const [code, setCode] = useState("");
+  const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleRedeem = async () => {
+    if (!code.trim()) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setLoading(true);
+    setStatus(null);
+    const result = await redeemPromoCode(code);
+    setLoading(false);
+    setStatus({ type: result.success ? "success" : "error", message: result.message });
+    if (result.success) setCode("");
+  };
+
+  const handleClose = () => {
+    setCode("");
+    setStatus(null);
+    onClose();
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose} statusBarTranslucent>
+      <Pressable style={styles.modalBackdrop} onPress={handleClose}>
+        <Animated.View entering={SlideInDown.springify().damping(20)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
+          <Pressable>
+            <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
+            <View style={styles.sheetHeader}>
+              <Pressable onPress={handleClose} style={styles.sheetClose}>
+                <Ionicons name="chevron-down" size={22} color={theme.textSecondary} />
+              </Pressable>
+              <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>Promo Code</Text>
+              <View style={styles.sheetClose} />
+            </View>
+
+            <View style={styles.promoBody}>
+              <View style={[styles.promoIconWrap, { backgroundColor: Colors.coral + "18" }]}>
+                <Ionicons name="gift-outline" size={36} color={Colors.coral} />
+              </View>
+              <Text style={[styles.promoTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
+                Have a promo code?
+              </Text>
+              <Text style={[styles.promoDesc, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
+                Enter your code below to unlock Lecto Pro access.
+              </Text>
+
+              <TextInput
+                style={[styles.promoInput, { backgroundColor: theme.background, borderColor: theme.border, color: theme.text, fontFamily: "DMSans_500Medium" }]}
+                placeholder="Enter code"
+                placeholderTextColor={theme.textTertiary}
+                value={code}
+                onChangeText={(t) => { setCode(t); setStatus(null); }}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                returnKeyType="done"
+                onSubmitEditing={handleRedeem}
+              />
+
+              {status && (
+                <Animated.View entering={FadeIn.duration(200)} style={[styles.promoStatus, { backgroundColor: status.type === "success" ? Colors.mint + "18" : Colors.coral + "18", borderColor: status.type === "success" ? Colors.mint + "40" : Colors.coral + "40" }]}>
+                  <Ionicons name={status.type === "success" ? "checkmark-circle" : "alert-circle"} size={18} color={status.type === "success" ? Colors.mint : Colors.coral} />
+                  <Text style={[styles.promoStatusText, { color: status.type === "success" ? Colors.mint : Colors.coral, fontFamily: "DMSans_500Medium" }]}>{status.message}</Text>
+                </Animated.View>
+              )}
+
+              <Pressable
+                onPress={handleRedeem}
+                disabled={!code.trim() || loading}
+                style={({ pressed }) => [styles.promoBtn, { backgroundColor: code.trim() && !loading ? Colors.indigo : theme.border, opacity: pressed ? 0.8 : 1 }]}
+              >
+                <Text style={[styles.promoBtnText, { color: code.trim() && !loading ? "#fff" : theme.textTertiary, fontFamily: "DMSans_700Bold" }]}>
+                  {loading ? "Checking..." : "Redeem"}
+                </Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Animated.View>
+      </Pressable>
+    </Modal>
+  );
+}
+
 // ─── Settings Modal ────────────────────────────────────────────────────────────
 function SettingsModal({ visible, onClose, theme }: { visible: boolean; onClose: () => void; theme: typeof Colors.light }) {
-  const { language, setLanguage } = useSettings();
-  const { isSubscribed } = useSubscription();
+  const { language } = useSettings();
+  const { isSubscribed, restorePurchases } = useSubscription();
   const [showPaywall, setShowPaywall] = useState(false);
+  const [showLanguage, setShowLanguage] = useState(false);
+  const [showPromo, setShowPromo] = useState(false);
+  const [restoring, setRestoring] = useState(false);
   const { recordings: allRecordings } = useRecordings();
   const recordingCount = allRecordings.length;
+
+  const handleRestore = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setRestoring(true);
+    const success = await restorePurchases();
+    setRestoring(false);
+    if (success) {
+      setShowPaywall(false);
+    }
+  };
 
   return (
     <>
@@ -510,62 +655,93 @@ function SettingsModal({ visible, onClose, theme }: { visible: boolean; onClose:
                 <Pressable onPress={onClose} style={styles.sheetClose}><Ionicons name="close" size={22} color={theme.textSecondary} /></Pressable>
               </View>
 
-              {/* Subscription Row */}
-              <Pressable
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowPaywall(true); }}
-                style={({ pressed }) => [
-                  styles.subscriptionRow,
-                  { backgroundColor: isSubscribed ? Colors.indigo + "0F" : Colors.coral + "0F", borderColor: isSubscribed ? Colors.indigo + "30" : Colors.coral + "30", opacity: pressed ? 0.8 : 1 },
-                ]}
-              >
-                <View style={[styles.subIcon, { backgroundColor: isSubscribed ? Colors.indigo : Colors.coral }]}>
-                  <Ionicons name={isSubscribed ? "star" : "sparkles"} size={18} color="#fff" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.subTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
-                    {isSubscribed ? "Lecto Pro · Active" : "Upgrade to Pro"}
-                  </Text>
-                  <Text style={[styles.subDesc, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
-                    {isSubscribed
-                      ? "Unlimited lectures & all features unlocked"
-                      : `${recordingCount}/${FREE_RECORDING_LIMIT} free lectures used · Tap to unlock`}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={isSubscribed ? Colors.indigo : Colors.coral} />
-              </Pressable>
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
+                {/* Subscription Banner */}
+                <Pressable
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowPaywall(true); }}
+                  style={({ pressed }) => [
+                    styles.subscriptionRow,
+                    { backgroundColor: isSubscribed ? Colors.indigo + "0F" : Colors.coral + "0F", borderColor: isSubscribed ? Colors.indigo + "30" : Colors.coral + "30", opacity: pressed ? 0.8 : 1 },
+                  ]}
+                >
+                  <View style={[styles.subIcon, { backgroundColor: isSubscribed ? Colors.indigo : Colors.coral }]}>
+                    <Ionicons name={isSubscribed ? "star" : "sparkles"} size={18} color="#fff" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.subTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
+                      {isSubscribed ? "Lecto Pro · Active" : "Upgrade to Pro"}
+                    </Text>
+                    <Text style={[styles.subDesc, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
+                      {isSubscribed
+                        ? "Unlimited lectures & all features unlocked"
+                        : `${recordingCount}/${FREE_RECORDING_LIMIT} free lectures used · Tap to unlock`}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={isSubscribed ? Colors.indigo : Colors.coral} />
+                </Pressable>
 
-              <View style={[styles.sectionHeader, { borderBottomColor: theme.border }]}>
-                <View style={[styles.sectionIcon, { backgroundColor: Colors.indigo + "18" }]}>
-                  <Ionicons name="language" size={16} color={Colors.indigo} />
+                {/* PREFERENCES */}
+                <Text style={[styles.settingsGroupLabel, { color: theme.textTertiary, fontFamily: "DMSans_500Medium" }]}>PREFERENCES</Text>
+                <View style={[styles.settingsGroup, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                  <Pressable
+                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowLanguage(true); }}
+                    style={({ pressed }) => [styles.settingsRow, { opacity: pressed ? 0.7 : 1 }]}
+                  >
+                    <View style={[styles.settingsRowIcon, { backgroundColor: Colors.indigo + "18" }]}>
+                      <Ionicons name="language-outline" size={18} color={Colors.indigo} />
+                    </View>
+                    <Text style={[styles.settingsRowLabel, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>AI Language</Text>
+                    <Text style={[styles.settingsRowValue, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>{language.name}</Text>
+                    <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
+                  </Pressable>
                 </View>
-                <View style={styles.sectionInfo}>
-                  <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>AI Language</Text>
-                  <Text style={[styles.sectionDesc, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>Controls transcription, summaries, and chat responses</Text>
+
+                {/* ACCOUNT */}
+                <Text style={[styles.settingsGroupLabel, { color: theme.textTertiary, fontFamily: "DMSans_500Medium" }]}>ACCOUNT</Text>
+                <View style={[styles.settingsGroup, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                  <Pressable
+                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowPromo(true); }}
+                    style={({ pressed }) => [styles.settingsRow, styles.settingsRowBorder, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }]}
+                  >
+                    <View style={[styles.settingsRowIcon, { backgroundColor: Colors.coral + "18" }]}>
+                      <Ionicons name="gift-outline" size={18} color={Colors.coral} />
+                    </View>
+                    <Text style={[styles.settingsRowLabel, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>Promo Code</Text>
+                    <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
+                  </Pressable>
+                  <Pressable
+                    onPress={handleRestore}
+                    style={({ pressed }) => [styles.settingsRow, { opacity: pressed ? 0.7 : 1 }]}
+                  >
+                    <View style={[styles.settingsRowIcon, { backgroundColor: Colors.mint + "18" }]}>
+                      <Ionicons name="refresh-outline" size={18} color={Colors.mint} />
+                    </View>
+                    <Text style={[styles.settingsRowLabel, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>
+                      {restoring ? "Restoring..." : "Restore Purchases"}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
+                  </Pressable>
                 </View>
-              </View>
-              <ScrollView style={styles.langList} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-                {LANGUAGES.map((lang) => {
-                  const isSelected = language.code === lang.code;
-                  return (
-                    <Pressable key={lang.code} onPress={() => { Haptics.selectionAsync(); setLanguage(lang); }}
-                      style={({ pressed }) => [styles.langRow, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }, isSelected && { backgroundColor: Colors.indigo + "0E" }]}>
-                      <View style={styles.langBadge}>
-                        <Text style={[styles.langCode, { color: Colors.indigo, fontFamily: "DMSans_700Bold" }]}>{lang.code.toUpperCase()}</Text>
-                      </View>
-                      <View style={styles.langInfo}>
-                        <Text style={[styles.langName, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>{lang.name}</Text>
-                        <Text style={[styles.langNative, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>{lang.nativeName}</Text>
-                      </View>
-                      {isSelected && <Ionicons name="checkmark-circle" size={22} color={Colors.indigo} />}
-                    </Pressable>
-                  );
-                })}
+
+                {/* ABOUT */}
+                <Text style={[styles.settingsGroupLabel, { color: theme.textTertiary, fontFamily: "DMSans_500Medium" }]}>ABOUT</Text>
+                <View style={[styles.settingsGroup, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                  <View style={styles.settingsRow}>
+                    <View style={[styles.settingsRowIcon, { backgroundColor: Colors.indigo + "18" }]}>
+                      <Ionicons name="information-circle-outline" size={18} color={Colors.indigo} />
+                    </View>
+                    <Text style={[styles.settingsRowLabel, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>Version</Text>
+                    <Text style={[styles.settingsRowValue, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>1.0.0</Text>
+                  </View>
+                </View>
               </ScrollView>
             </Pressable>
           </Animated.View>
         </Pressable>
       </Modal>
 
+      <LanguagePickerModal visible={showLanguage} onClose={() => setShowLanguage(false)} theme={theme} />
+      <PromoCodeModal visible={showPromo} onClose={() => setShowPromo(false)} theme={theme} />
       <Paywall visible={showPaywall} onClose={() => setShowPaywall(false)} />
     </>
   );
@@ -1064,13 +1240,29 @@ const styles = StyleSheet.create({
   subTitle: { fontSize: 15 },
   subDesc: { fontSize: 12, marginTop: 2 },
 
-  // Settings
-  sectionHeader: { flexDirection: "row", alignItems: "flex-start", gap: 12, paddingHorizontal: 20, paddingBottom: 14, borderBottomWidth: StyleSheet.hairlineWidth },
-  sectionIcon: { width: 32, height: 32, borderRadius: 8, alignItems: "center", justifyContent: "center", marginTop: 2 },
-  sectionInfo: { flex: 1, gap: 3 },
-  sectionTitle: { fontSize: 15 },
-  sectionDesc: { fontSize: 12, lineHeight: 17 },
-  langList: { maxHeight: 400 },
+  // Settings groups
+  settingsGroupLabel: { fontSize: 11, letterSpacing: 0.8, marginHorizontal: 20, marginTop: 20, marginBottom: 6 },
+  settingsGroup: { marginHorizontal: 16, borderRadius: 16, borderWidth: 1, overflow: "hidden" },
+  settingsRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 13 },
+  settingsRowBorder: { borderBottomWidth: StyleSheet.hairlineWidth },
+  settingsRowIcon: { width: 32, height: 32, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  settingsRowLabel: { flex: 1, fontSize: 15 },
+  settingsRowValue: { fontSize: 14, marginRight: 2 },
+  settingsHint: { fontSize: 13, marginHorizontal: 20, marginBottom: 12, marginTop: -4 },
+
+  // Promo code
+  promoBody: { paddingHorizontal: 20, paddingBottom: 32, alignItems: "center", gap: 10 },
+  promoIconWrap: { width: 72, height: 72, borderRadius: 22, alignItems: "center", justifyContent: "center", marginBottom: 4 },
+  promoTitle: { fontSize: 20, textAlign: "center" },
+  promoDesc: { fontSize: 14, textAlign: "center", lineHeight: 20, marginBottom: 6 },
+  promoInput: { width: "100%", borderRadius: 14, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 14, fontSize: 18, textAlign: "center", letterSpacing: 2 },
+  promoStatus: { flexDirection: "row", alignItems: "center", gap: 8, width: "100%", paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, borderWidth: 1 },
+  promoStatusText: { flex: 1, fontSize: 13, lineHeight: 18 },
+  promoBtn: { width: "100%", paddingVertical: 15, borderRadius: 16, alignItems: "center", justifyContent: "center", marginTop: 4 },
+  promoBtnText: { fontSize: 16 },
+
+  // Language picker
+  langList: { maxHeight: 380 },
   langRow: { flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 20, paddingVertical: 13, borderBottomWidth: StyleSheet.hairlineWidth },
   langBadge: { width: 42, height: 28, borderRadius: 6, backgroundColor: Colors.indigo + "14", alignItems: "center", justifyContent: "center" },
   langCode: { fontSize: 11, letterSpacing: 0.5 },
