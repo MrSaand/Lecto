@@ -424,51 +424,54 @@ export default function DetailScreen() {
 
       {/* Rename modal */}
       <Modal visible={showRename} transparent animationType="slide" onRequestClose={() => setShowRename(false)} statusBarTranslucent>
-        <Pressable style={styles.renameBackdrop} onPress={() => setShowRename(false)}>
+        <KeyboardAvoidingView
+          style={styles.renameBackdrop}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={0}
+        >
+          <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={() => setShowRename(false)} />
           <View style={[styles.renameSheet, { backgroundColor: theme.card }]}>
-            <Pressable>
-              <View style={styles.renameHandle}>
-                <View style={[styles.renameHandleBar, { backgroundColor: theme.border }]} />
-              </View>
-              <View style={styles.renameHeader}>
-                <Text style={[styles.renameTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>Rename Lecture</Text>
-                <Pressable onPress={() => setShowRename(false)} style={styles.renameClose}>
-                  <Ionicons name="close" size={22} color={theme.textSecondary} />
-                </Pressable>
-              </View>
-              <View style={styles.renameBody}>
-                <TextInput
-                  style={[styles.renameInput, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border, fontFamily: "DMSans_400Regular" }]}
-                  value={renameValue}
-                  onChangeText={setRenameValue}
-                  autoFocus
-                  selectTextOnFocus
-                  returnKeyType="done"
-                  onSubmitEditing={async () => {
-                    const trimmed = renameValue.trim();
-                    if (!trimmed) return;
-                    await renameRecording(id, trimmed);
-                    setShowRename(false);
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                  }}
-                />
-                <Pressable
-                  onPress={async () => {
-                    const trimmed = renameValue.trim();
-                    if (!trimmed) return;
-                    await renameRecording(id, trimmed);
-                    setShowRename(false);
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                  }}
-                  style={({ pressed }) => [styles.renameSaveBtn, { backgroundColor: renameValue.trim() ? Colors.indigo : theme.border, opacity: pressed ? 0.8 : 1 }]}
-                >
-                  <Feather name="check" size={18} color={renameValue.trim() ? "#fff" : theme.textTertiary} />
-                  <Text style={[styles.renameSaveBtnText, { color: renameValue.trim() ? "#fff" : theme.textTertiary, fontFamily: "DMSans_700Bold" }]}>Save</Text>
-                </Pressable>
-              </View>
-            </Pressable>
+            <View style={styles.renameHandle}>
+              <View style={[styles.renameHandleBar, { backgroundColor: theme.border }]} />
+            </View>
+            <View style={styles.renameHeader}>
+              <Text style={[styles.renameTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>Rename Lecture</Text>
+              <Pressable onPress={() => setShowRename(false)} style={styles.renameClose}>
+                <Ionicons name="close" size={22} color={theme.textSecondary} />
+              </Pressable>
+            </View>
+            <View style={styles.renameBody}>
+              <TextInput
+                style={[styles.renameInput, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border, fontFamily: "DMSans_400Regular" }]}
+                value={renameValue}
+                onChangeText={setRenameValue}
+                autoFocus
+                selectTextOnFocus
+                returnKeyType="done"
+                onSubmitEditing={async () => {
+                  const trimmed = renameValue.trim();
+                  if (!trimmed) return;
+                  await renameRecording(id, trimmed);
+                  setShowRename(false);
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                }}
+              />
+              <Pressable
+                onPress={async () => {
+                  const trimmed = renameValue.trim();
+                  if (!trimmed) return;
+                  await renameRecording(id, trimmed);
+                  setShowRename(false);
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                }}
+                style={({ pressed }) => [styles.renameSaveBtn, { backgroundColor: renameValue.trim() ? Colors.indigo : theme.border, opacity: pressed ? 0.8 : 1 }]}
+              >
+                <Feather name="check" size={18} color={renameValue.trim() ? "#fff" : theme.textTertiary} />
+                <Text style={[styles.renameSaveBtnText, { color: renameValue.trim() ? "#fff" : theme.textTertiary, fontFamily: "DMSans_700Bold" }]}>Save</Text>
+              </Pressable>
+            </View>
           </View>
-        </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Delete confirmation sheet */}
@@ -887,7 +890,7 @@ const styles = StyleSheet.create({
   deleteConfirmText: { fontSize: 16, color: "#fff" },
 
   // Rename modal
-  renameBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },
+  renameBackdrop: { flex: 1, justifyContent: "flex-end" },
   renameSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.12, shadowRadius: 20, elevation: 20 },
   renameHandle: { alignItems: "center", paddingTop: 12, paddingBottom: 4 },
   renameHandleBar: { width: 36, height: 4, borderRadius: 2 },

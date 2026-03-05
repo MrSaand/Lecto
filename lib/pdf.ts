@@ -1,6 +1,7 @@
 import * as Print from "expo-print";
 import * as FileSystem from "expo-file-system/legacy";
-import { Platform, Share } from "react-native";
+import * as Sharing from "expo-sharing";
+import { Platform } from "react-native";
 import { Recording } from "@/contexts/RecordingsContext";
 import { getApiUrl } from "@/lib/query-client";
 
@@ -239,13 +240,14 @@ async function shareWebPdf(
 
 async function shareNativePdf(html: string, filename: string): Promise<void> {
   const { uri: fileUri } = await Print.printToFileAsync({ html, base64: false });
-
-  if (Platform.OS === "android") {
-    const contentUri = await FileSystem.getContentUriAsync(fileUri);
-    await Share.share({ url: contentUri });
-  } else {
-    await Share.share({ url: fileUri });
-  }
+  const safeFilename = filename.replace(/[^a-z0-9]/gi, "_") + ".pdf";
+  const destUri = FileSystem.documentDirectory + safeFilename;
+  await FileSystem.copyAsync({ from: fileUri, to: destUri });
+  await Sharing.shareAsync(destUri, {
+    mimeType: "application/pdf",
+    dialogTitle: `Share ${filename}`,
+    UTI: "com.adobe.pdf",
+  });
 }
 
 export async function shareRecordingAsPdf(rec: Recording): Promise<void> {

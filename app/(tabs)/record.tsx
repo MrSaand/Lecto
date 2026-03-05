@@ -32,7 +32,7 @@ import Animated, {
   FadeOut,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import { Audio } from "expo-av";
+import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from "expo-av";
 import { router } from "expo-router";
 
 const PENDING_KEY = "@lecto_pending_lecture";
@@ -111,17 +111,34 @@ export default function RecordScreen() {
 
   useEffect(() => () => stopTimer(), []);
 
-  // Resume keep-awake when app returns to foreground during recording
+  // Track background entry time so we can restore the elapsed timer on foreground
   const recordStateRef = useRef<RecordState>("idle");
   recordStateRef.current = recordState;
+  const backgroundAtRef = useRef<number | null>(null);
   useEffect(() => {
     if (Platform.OS === "web") return;
     const sub = AppState.addEventListener("change", async (next: AppStateStatus) => {
-      if (next === "active" && recordStateRef.current === "recording") {
-        try { await activateKeepAwakeAsync(); } catch {}
+      const state = recordStateRef.current;
+      if (next === "background" || next === "inactive") {
+        if (state === "recording") {
+          backgroundAtRef.current = Date.now();
+          stopTimer();
+        }
+      } else if (next === "active") {
+        if (state === "recording") {
+          if (backgroundAtRef.current !== null) {
+            const secondsInBackground = Math.round((Date.now() - backgroundAtRef.current) / 1000);
+            elapsedRef.current += secondsInBackground;
+            setElapsed(elapsedRef.current);
+            backgroundAtRef.current = null;
+          }
+          startTimer();
+          try { await activateKeepAwakeAsync(); } catch {}
+        }
       }
     });
     return () => sub.remove();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ─── Web recording via MediaRecorder ───────────────────────────────────────
@@ -315,6 +332,10 @@ export default function RecordScreen() {
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
         staysActiveInBackground: true,
+        interruptionModeIOS: InterruptionModeIOS.DoNotMix,
+        shouldDuckAndroid: false,
+        interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
+        playThroughEarpieceAndroid: false,
       });
       const { recording } = await Audio.Recording.createAsync(
         Audio.RecordingOptionsPresets.HIGH_QUALITY
