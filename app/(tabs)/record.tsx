@@ -96,6 +96,10 @@ export default function RecordScreen() {
   const buttonScale = useSharedValue(1);
 
   const startTimer = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
     timerRef.current = setInterval(() => {
       elapsedRef.current += 1;
       setElapsed(elapsedRef.current);
