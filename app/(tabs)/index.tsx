@@ -20,7 +20,7 @@ import { useRecordings, Recording, Folder } from "@/contexts/RecordingsContext";
 import { useSettings, LANGUAGES, Language } from "@/contexts/SettingsContext";
 import { useSubscription, FREE_RECORDING_LIMIT } from "@/contexts/SubscriptionContext";
 import Paywall from "@/components/Paywall";
-import Animated, { FadeInDown, FadeIn, FadeInUp } from "react-native-reanimated";
+import Animated, { FadeIn, FadeInUp } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 
 function formatDuration(seconds: number): string {
@@ -64,7 +64,7 @@ function FolderCard({
   const canDrop = isDropTarget && !isMoving;
 
   return (
-    <Animated.View entering={FadeInDown.springify()} style={isMoving ? { opacity: 0.45 } : undefined}>
+    <Animated.View entering={FadeIn.duration(200)} style={isMoving ? { opacity: 0.45 } : undefined}>
       <Pressable
         onPress={canDrop ? onDrop : isDropTarget ? undefined : onPress}
         onLongPress={onLongPress}
@@ -128,7 +128,7 @@ function RecordingCard({
   const dimmed = isDropModeActive && !isMoving;
 
   return (
-    <Animated.View entering={FadeInDown.springify()} style={dimmed ? { opacity: 0.45 } : undefined}>
+    <Animated.View entering={FadeIn.duration(200)} style={dimmed ? { opacity: 0.45 } : undefined}>
       <Pressable
         onPress={isDropModeActive ? undefined : onPress}
         onLongPress={onLongPress}
