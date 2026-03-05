@@ -482,7 +482,6 @@ export default function RecordScreen() {
       <ScrollView
         contentContainerStyle={[styles.content, { paddingTop: topPadding + 20, paddingBottom: bottomPadding }]}
         showsVerticalScrollIndicator={false}
-        scrollEnabled={false}
       >
         <Animated.View entering={FadeIn.duration(400)} style={styles.headingBlock}>
           <Text style={[styles.header, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>

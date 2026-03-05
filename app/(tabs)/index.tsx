@@ -10,6 +10,7 @@ import {
   Platform,
   Modal,
   ScrollView,
+  KeyboardAvoidingView,
 } from "react-native";
 import { shareRecordingAsPdf, shareFolderAsPdf } from "@/lib/pdf";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -255,8 +256,8 @@ function CreateFolderModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onCancel} statusBarTranslucent>
-      <View style={styles.modalBackdrop}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel} statusBarTranslucent>
+      <KeyboardAvoidingView style={styles.modalBackdrop} behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={onCancel} />
         <View style={[styles.modalSheet, { backgroundColor: theme.card }]}>
           <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
@@ -289,7 +290,7 @@ function CreateFolderModal({
             </Pressable>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -319,8 +320,8 @@ function RenameModal({
   };
 
   return (
-    <Modal visible={!!target} transparent animationType="none" onRequestClose={onCancel} statusBarTranslucent>
-      <View style={styles.modalBackdrop}>
+    <Modal visible={!!target} transparent animationType="slide" onRequestClose={onCancel} statusBarTranslucent>
+      <KeyboardAvoidingView style={styles.modalBackdrop} behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={onCancel} />
         <View style={[styles.modalSheet, { backgroundColor: theme.card }]}>
           <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
@@ -355,7 +356,7 @@ function RenameModal({
             </Pressable>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -381,7 +382,7 @@ function OptionsSheet({
   const isFolder = target?.type === "folder";
 
   return (
-    <Modal visible={!!target} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
+    <Modal visible={!!target} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
       <View style={styles.modalBackdrop}>
         <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={onClose} />
         <View style={[styles.modalSheet, { backgroundColor: theme.card }]}>
@@ -450,7 +451,7 @@ function DeleteConfirmModal({
   onConfirm: () => void;
 }) {
   return (
-    <Modal visible={!!target} transparent animationType="none" onRequestClose={onCancel} statusBarTranslucent>
+    <Modal visible={!!target} transparent animationType="slide" onRequestClose={onCancel} statusBarTranslucent>
       <View style={styles.modalBackdrop}>
         <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={onCancel} />
         <View style={[styles.modalSheet, { backgroundColor: theme.card }]}>
@@ -531,7 +532,7 @@ function SettingsModal({ visible, onClose, onPaywall, theme }: {
   };
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose} statusBarTranslucent>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose} statusBarTranslucent>
       <View style={styles.modalBackdrop}>
         <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={handleClose} />
         <View style={[styles.modalSheet, { backgroundColor: theme.card }]}>
