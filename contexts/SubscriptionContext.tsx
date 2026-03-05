@@ -158,7 +158,11 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         return true;
       }
       return false;
-    } catch (e) {
+    } catch (e: any) {
+      // errorCode 11 = store not available (expected in Expo Go test environment)
+      if (e?.code === 11 || e?.userInfo?.readable_error_code === "STORE_PROBLEM") {
+        return false;
+      }
       console.error("Restore error:", e);
       return false;
     }
@@ -166,7 +170,13 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
   const redeemPromoCode = async (code: string): Promise<{ success: boolean; message: string; durationDays?: number }> => {
     const normalized = code.trim().toUpperCase();
-    if (usedPromoCodes.includes(normalized)) {
+    // Always read fresh from storage to avoid stale closure issues
+    let currentUsed: string[] = [];
+    try {
+      const stored = await AsyncStorage.getItem(USED_PROMO_KEY);
+      if (stored) currentUsed = JSON.parse(stored);
+    } catch {}
+    if (currentUsed.includes(normalized)) {
       return { success: false, message: "You have already used this promo code." };
     }
     try {
@@ -182,7 +192,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           ? undefined
           : Date.now() + data.durationDays * 24 * 60 * 60 * 1000;
         await grantSubscription(expiresAt);
-        const updated = [...usedPromoCodes, normalized];
+        const updated = [...currentUsed, normalized];
         setUsedPromoCodes(updated);
         await AsyncStorage.setItem(USED_PROMO_KEY, JSON.stringify(updated));
         return { success: true, message: data.message, durationDays: data.durationDays };

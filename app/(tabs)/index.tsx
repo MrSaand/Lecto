@@ -523,6 +523,7 @@ function SettingsModal({ visible, onClose, onPaywall, theme }: {
   const { recordings: allRecordings } = useRecordings();
   const [displayPage, setDisplayPage] = useState<SettingsPage>("main");
   const [restoring, setRestoring] = useState(false);
+  const [restoreResult, setRestoreResult] = useState<"success" | "none" | null>(null);
   const [promoCode, setPromoCode] = useState("");
   const [promoStatus, setPromoStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [promoLoading, setPromoLoading] = useState(false);
@@ -551,8 +552,11 @@ function SettingsModal({ visible, onClose, onPaywall, theme }: {
   const handleRestore = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setRestoring(true);
-    await restorePurchases();
+    setRestoreResult(null);
+    const restored = await restorePurchases();
     setRestoring(false);
+    setRestoreResult(restored ? "success" : "none");
+    setTimeout(() => setRestoreResult(null), 3000);
   };
 
   const handleRedeem = async () => {
@@ -568,7 +572,7 @@ function SettingsModal({ visible, onClose, onPaywall, theme }: {
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose} statusBarTranslucent>
-      <KeyboardAvoidingView style={styles.modalBackdrop} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <View style={styles.modalBackdrop}>
         <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={handleClose} />
         <View style={[styles.modalSheet, { backgroundColor: theme.card }]}>
           <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
@@ -582,7 +586,7 @@ function SettingsModal({ visible, onClose, onPaywall, theme }: {
                 </View>
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
                   <Pressable
-                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); handleClose(); onPaywall(); }}
+                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); if (!isSubscribed) { handleClose(); onPaywall(); } }}
                     style={({ pressed }) => [styles.subscriptionRow, { backgroundColor: isSubscribed ? Colors.indigo + "0F" : Colors.coral + "0F", borderColor: isSubscribed ? Colors.indigo + "30" : Colors.coral + "30", opacity: pressed ? 0.8 : 1 }]}
                   >
                     <View style={[styles.subIcon, { backgroundColor: isSubscribed ? Colors.indigo : Colors.coral }]}>
@@ -614,10 +618,12 @@ function SettingsModal({ visible, onClose, onPaywall, theme }: {
                       <Text style={[styles.settingsRowLabel, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>Promo Code</Text>
                       <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
                     </Pressable>
-                    <Pressable onPress={handleRestore} style={({ pressed }) => [styles.settingsRow, { opacity: pressed ? 0.7 : 1 }]}>
+                    <Pressable onPress={handleRestore} disabled={restoring} style={({ pressed }) => [styles.settingsRow, { opacity: pressed ? 0.7 : 1 }]}>
                       <View style={[styles.settingsRowIcon, { backgroundColor: Colors.mint + "18" }]}><Ionicons name="refresh-outline" size={18} color={Colors.mint} /></View>
                       <Text style={[styles.settingsRowLabel, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>{restoring ? "Restoring..." : "Restore Purchases"}</Text>
-                      <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
+                      {restoreResult === "success" && <Text style={{ color: Colors.mint, fontFamily: "DMSans_500Medium", fontSize: 13 }}>Restored!</Text>}
+                      {restoreResult === "none" && <Text style={{ color: theme.textSecondary, fontFamily: "DMSans_400Regular", fontSize: 13 }}>No purchases found</Text>}
+                      {!restoreResult && <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />}
                     </Pressable>
                   </View>
 
@@ -703,7 +709,7 @@ function SettingsModal({ visible, onClose, onPaywall, theme }: {
             )}
           </Animated.View>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }

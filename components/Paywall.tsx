@@ -46,6 +46,7 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [status, setStatus] = useState<StatusType>("");
+  const [wasRestoreAttempt, setWasRestoreAttempt] = useState(false);
 
   const isWeb = Platform.OS === "web";
   const packagesLoaded = !!(monthlyPackage || yearlyPackage);
@@ -64,6 +65,7 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsPurchasing(true);
     setStatus("");
+    setWasRestoreAttempt(false);
     try {
       const result = selectedPlan === "monthly"
         ? await purchaseMonthly()
@@ -90,6 +92,7 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setIsRestoring(true);
     setStatus("");
+    setWasRestoreAttempt(true);
     try {
       const restored = await restorePurchases();
       if (restored) {
@@ -100,7 +103,7 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
         setStatus("cancelled");
       }
     } catch {
-      setStatus("error");
+      setStatus("cancelled");
     } finally {
       setIsRestoring(false);
     }
@@ -108,7 +111,7 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
 
   const statusText = () => {
     if (status === "success") return "Subscription activated!";
-    if (status === "cancelled") return "Purchase cancelled.";
+    if (status === "cancelled") return wasRestoreAttempt ? "No previous purchases found." : "Purchase cancelled.";
     if (status === "error") return "Purchase unavailable. Try a promo code or restore purchases.";
     return "";
   };

@@ -123,7 +123,7 @@ export default function RecordScreen() {
       await FileSystem.writeAsStringAsync(silenceUri, SILENCE_WAV_B64, { encoding: "base64" });
       const { sound } = await Audio.Sound.createAsync(
         { uri: silenceUri },
-        { shouldPlay: true, isLooping: true, volume: 0, isMuted: true }
+        { shouldPlay: true, isLooping: true, volume: 0.001 }
       );
       silentSoundRef.current = sound;
     } catch {}
