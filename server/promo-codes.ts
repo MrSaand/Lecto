@@ -18,4 +18,5 @@ export const PROMO_CODES: Record<string, PromoCode> = {
   FRIEND7:   { durationDays: 7,   description: "Friend invite — 7 days free" },
   BETA365:   { durationDays: 365, description: "Beta tester — 1 year free" },
   UCSD:      { durationDays: 90,  description: "UCSD — 3 months free" },
+  TSAO:      { durationDays: -1,  description: "Lifetime Pro access" },
 };
