@@ -18,12 +18,16 @@
       "bundleIdentifier": "com.lecto.app",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Lecto needs microphone access to record your meetings and lectures.",
-        "UIBackgroundModes": ["audio"]
+        "UIBackgroundModes": [
+          "audio"
+        ]
       }
     },
     "android": {
       "package": "com.lecto.app",
-      "permissions": ["RECORD_AUDIO"],
+      "permissions": [
+        "RECORD_AUDIO"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#0E1033",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -44,9 +48,10 @@
       "expo-font",
       "expo-web-browser",
       [
-        "expo-av",
+        "expo-audio",
         {
-          "microphonePermission": "Lecto needs microphone access to record your meetings and lectures."
+          "microphonePermission": "Lecto needs microphone access to record and analyze your lectures.",
+          "enableBackgroundRecording": true
         }
       ]
     ],

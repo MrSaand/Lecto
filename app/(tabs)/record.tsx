@@ -32,13 +32,10 @@ import Animated, {
   FadeOut,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from "expo-av";
+import { useAudioRecorder, RecordingPresets, setAudioModeAsync, AudioModule } from "expo-audio";
 import { router } from "expo-router";
 
 const PENDING_KEY = "@lecto_pending_lecture";
-
-const SILENCE_WAV_B64 =
-  "UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICagICAgICagICAgICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagA==";
 
 type RecordState = "idle" | "recording" | "paused" | "processing";
 
@@ -78,6 +75,7 @@ export default function RecordScreen() {
   const isDark = colorScheme === "dark";
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const { addRecording, recordings } = useRecordings();
   const { language } = useSettings();
   const { isSubscribed } = useSubscription();
@@ -88,8 +86,6 @@ export default function RecordScreen() {
   const [statusMsg, setStatusMsg] = useState("");
 
   // Native recording ref
-  const recordingRef = useRef<Audio.Recording | null>(null);
-  const silentSoundRef = useRef<Audio.Sound | null>(null);
   // Web recording refs
   const mediaRecorderRef = useRef<any>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -114,30 +110,16 @@ export default function RecordScreen() {
   };
 
   useEffect(() => () => stopTimer(), []);
-
-  const startSilentAudio = async () => {
-    if (Platform.OS !== "ios") return;
-    try {
-      await stopSilentAudio();
-      const silenceUri = FileSystem.cacheDirectory + "lecto_silence.wav";
-      await FileSystem.writeAsStringAsync(silenceUri, SILENCE_WAV_B64, { encoding: "base64" });
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: silenceUri },
-        { shouldPlay: true, isLooping: true, volume: 0.001 }
-      );
-      silentSoundRef.current = sound;
-    } catch {}
-  };
-
-  const stopSilentAudio = async () => {
-    if (silentSoundRef.current) {
-      try {
-        await silentSoundRef.current.stopAsync();
-        await silentSoundRef.current.unloadAsync();
-      } catch {}
-      silentSoundRef.current = null;
+  useEffect(() => {
+    async function setupAudioPermissions() {
+      await setAudioModeAsync({
+        allowsRecording: true,
+        allowsBackgroundRecording: true, // This is the crucial fix for screen-off recording
+        playsInSilentMode: true,
+      });
     }
-  };
+  setupAudioPermissions();
+  } , []);
 
   // Track background entry time so we can restore the elapsed timer on foreground
   const recordStateRef = useRef<RecordState>("idle");
@@ -350,30 +332,22 @@ export default function RecordScreen() {
 
   // ─── Native recording via expo-av ──────────────────────────────────────────
   const startNativeRecording = async () => {
-    const { status } = await Audio.requestPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("Permission Required", "Microphone access is needed to record audio.");
-      return;
-    }
     try {
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: true,
-        interruptionModeIOS: InterruptionModeIOS.DoNotMix,
-        shouldDuckAndroid: false,
-        interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
-        playThroughEarpieceAndroid: false,
-      });
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
-      recordingRef.current = recording;
+      const permission = await AudioModule.requestRecordingPermissionsAsync();
+      
+      if (!permission.granted) {
+        Alert.alert("Permission Required", "Microphone access is needed to record audio.");
+        return;
+      }
+
+      // Prepare and start the background-safe recording
+      await recorder.prepareToRecordAsync();
+      recorder.record(); 
+      
       elapsedRef.current = 0;
       setElapsed(0);
       setRecordState("recording");
       startTimer();
-      startSilentAudio();
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch (e: any) {
       Alert.alert("Error", "Could not start recording: " + (e?.message || String(e)));
@@ -381,44 +355,36 @@ export default function RecordScreen() {
   };
 
   const pauseNativeRecording = async () => {
-    try {
-      await recordingRef.current?.pauseAsync();
-      setRecordState("paused");
-      stopTimer();
-      stopSilentAudio();
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } catch (e) {}
-  };
+  try {
+    recorder.pause(); // Uses the new expo-audio method
+    setRecordState("paused");
+    stopTimer();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  } catch (e) {}
+};
 
-  const resumeNativeRecording = async () => {
-    try {
-      await recordingRef.current?.startAsync();
-      setRecordState("recording");
-      startTimer();
-      startSilentAudio();
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } catch (e) {}
-  };
+const resumeNativeRecording = async () => {
+  try {
+    recorder.record(); // Resumes using the new expo-audio method
+    setRecordState("recording");
+    startTimer();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  } catch (e) {}
+};
 
-  const stopNativeRecording = async (): Promise<{ base64: string; filename: string; uri: string }> => {
-    if (!recordingRef.current) throw new Error("No recording in progress");
-    await stopSilentAudio();
-    await recordingRef.current.stopAndUnloadAsync();
-    const uri = recordingRef.current.getURI();
-    recordingRef.current = null;
-    if (!uri) throw new Error("Recording URI is unavailable");
-    const info = await FileSystem.getInfoAsync(uri);
-    if (!info.exists) throw new Error("Recording file not found. Please try again.");
-    if ((info as any).size === 0) throw new Error("Recording is empty. Please try again.");
-    const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: "base64",
-    });
-    if (!base64 || typeof base64 !== "string" || base64.length === 0) {
-      throw new Error("Failed to read audio data. Please try again.");
-    }
-    const filename = uri.split("/").pop() || "recording.m4a";
-    return { base64, filename, uri };
-  };
+const stopNativeRecording = async (): Promise<{ base64: string; filename: string; uri: string }> => {
+  if (!recorder) throw new Error("No recording in progress");
+
+  await recorder.stop();
+  const uri = recorder.uri; // This is the path to the lecture file
+  
+  if (!uri) throw new Error("Recording URI is unavailable");
+
+  const base64 = await FileSystem.readAsStringAsync(uri, { encoding: "base64" });
+  const filename = uri.split("/").pop() || "recording.m4a";
+  
+  return { base64, filename, uri };
+};
 
   // ─── Unified actions ────────────────────────────────────────────────────────
   const startRecording = () =>
