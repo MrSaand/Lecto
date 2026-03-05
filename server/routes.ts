@@ -76,12 +76,12 @@ Action items: extract concrete next steps with the most likely responsible speak
 Return ONLY valid JSON with no markdown or code fences.`;
 
       const analysisResponse = await getOpenAI().chat.completions.create({
-        model: "gpt-5.2",
+        model: "gpt-4o",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Transcript:\n${rawTranscript}` },
         ],
-        max_completion_tokens: 4096,
+        max_tokens: 4096,
       });
 
       const content = analysisResponse.choices[0]?.message?.content || "{}";
@@ -135,13 +135,13 @@ FORMATTING RULES — follow these exactly:
         : `You are a helpful AI assistant. Always respond in ${langName}. Use plain text only — no markdown, no asterisks, no hashtags, no special formatting symbols.`;
 
       const stream = await getOpenAI().chat.completions.create({
-        model: "gpt-5.2",
+        model: "gpt-4o",
         messages: [
           { role: "system", content: systemMessage },
           ...messages,
         ],
         stream: true,
-        max_completion_tokens: 2048,
+        max_tokens: 2048,
       });
 
       for await (const chunk of stream) {

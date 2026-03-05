@@ -122,15 +122,20 @@ export default function RecordScreen() {
 
   useEffect(() => () => stopTimer(), []);
   useEffect(() => {
-    async function setupAudioPermissions() {
-      await setAudioModeAsync({
-        allowsRecording: true,
-        allowsBackgroundRecording: true, // This is the crucial fix for screen-off recording
-        playsInSilentMode: true,
-      });
+    if (Platform.OS === "web") return;
+    async function setupAudioMode() {
+      try {
+        await setAudioModeAsync({
+          allowsRecording: true,
+          allowsBackgroundRecording: true,
+          playsInSilentMode: true,
+        });
+      } catch (e) {
+        console.warn("Audio mode setup failed:", e);
+      }
     }
-  setupAudioPermissions();
-  } , []);
+    setupAudioMode();
+  }, []);
 
   // Track background entry time so we can restore the elapsed timer on foreground
   const recordStateRef = useRef<RecordState>("idle");
@@ -357,13 +362,24 @@ export default function RecordScreen() {
       const permission = await AudioModule.requestRecordingPermissionsAsync();
       
       if (!permission.granted) {
-        Alert.alert("Permission Required", "Microphone access is needed to record audio.");
+        Alert.alert(
+          "Microphone Access Required",
+          "Please enable microphone access for Lecto in your device Settings to record lectures.",
+          [{ text: "OK" }]
+        );
         return;
       }
 
+      // Re-apply audio mode right before recording to ensure it's active on iOS
+      await setAudioModeAsync({
+        allowsRecording: true,
+        allowsBackgroundRecording: true,
+        playsInSilentMode: true,
+      });
+
       // Prepare and start the background-safe recording
       await recorder.prepareToRecordAsync();
-      recorder.record(); 
+      recorder.record();
       
       elapsedRef.current = 0;
       setElapsed(0);
@@ -371,6 +387,7 @@ export default function RecordScreen() {
       startTimer();
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch (e: any) {
+      setRecordState("idle");
       Alert.alert("Error", "Could not start recording: " + (e?.message || String(e)));
     }
   };

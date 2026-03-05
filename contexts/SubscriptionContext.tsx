@@ -75,7 +75,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       } catch {}
 
       try {
-        if (!API_KEY) return;
+        if (!API_KEY || Platform.OS === "web") return;
         Purchases.setLogLevel(Purchases.LOG_LEVEL.ERROR);
         Purchases.configure({ apiKey: API_KEY });
         await refresh();
@@ -209,7 +209,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       monthlyPackage, yearlyPackage,
       purchaseMonthly, purchaseYearly, purchasePackage, restorePurchases, refresh, redeemPromoCode,
     }),
-    [isSubscribed, isLoading, customerInfo, offering, monthlyPackage, yearlyPackage]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isSubscribed, isLoading, customerInfo, offering, monthlyPackage, yearlyPackage, usedPromoCodes]
   );
 
   return <SubscriptionContext.Provider value={value}>{children}</SubscriptionContext.Provider>;
