@@ -5,10 +5,16 @@ import { Buffer } from "node:buffer";
 import express from "express";
 import { PROMO_CODES } from "./promo-codes";
 
-const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-});
+function getOpenAI(): OpenAI {
+  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error("AI_INTEGRATIONS_OPENAI_API_KEY environment variable is not set");
+  }
+  return new OpenAI({
+    apiKey,
+    baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+  });
+}
 
 const LANGUAGE_NAMES: Record<string, string> = {
   en: "English", es: "Spanish", fr: "French", de: "German", it: "Italian",
@@ -38,7 +44,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const file = await toFile(audioBuffer, `audio.${ext}`, { type: mimeType });
 
       // Pass language code to Whisper so it transcribes in the original spoken language
-      const transcriptionResponse = await openai.audio.transcriptions.create({
+      const transcriptionResponse = await getOpenAI().audio.transcriptions.create({
         file,
         model: "gpt-4o-mini-transcribe",
         ...(language !== "en" ? { language } : {}),
@@ -69,7 +75,7 @@ Speaker assignment rules: assign labels based on changes in speaking style or ro
 Action items: extract concrete next steps with the most likely responsible speaker.
 Return ONLY valid JSON with no markdown or code fences.`;
 
-      const analysisResponse = await openai.chat.completions.create({
+      const analysisResponse = await getOpenAI().chat.completions.create({
         model: "gpt-5.2",
         messages: [
           { role: "system", content: systemPrompt },
@@ -128,7 +134,7 @@ FORMATTING RULES — follow these exactly:
 - Keep responses conversational and easy to read aloud.`
         : `You are a helpful AI assistant. Always respond in ${langName}. Use plain text only — no markdown, no asterisks, no hashtags, no special formatting symbols.`;
 
-      const stream = await openai.chat.completions.create({
+      const stream = await getOpenAI().chat.completions.create({
         model: "gpt-5.2",
         messages: [
           { role: "system", content: systemMessage },

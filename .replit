@@ -11,15 +11,7 @@ run = ["npm", "run", "server:prod"]
 
 [[ports]]
 localPort = 5000
-externalPort = 5000
-
-[[ports]]
-localPort = 8081
 externalPort = 80
-
-[[ports]]
-localPort = 8082
-externalPort = 3000
 
 [env]
 PORT = "5000"
@@ -27,6 +19,7 @@ PORT = "5000"
 [agent]
 stack = "EXPO"
 integrations = ["javascript_openai_ai_integrations:2.0.0"]
+expertMode = true
 
 [workflows]
 runButton = "Project"
@@ -39,6 +32,10 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "workflow.run"
 args = "Start App"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start Backend"
 
 [[workflows.workflow]]
 name = "Start App"
@@ -57,6 +54,9 @@ args = "Start Frontend"
 name = "Start Backend"
 author = "agent"
 mode = "sequential"
+
+[workflows.workflow.metadata]
+outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"

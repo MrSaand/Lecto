@@ -73,6 +73,13 @@ Preferred communication style: Simple, everyday language.
 - `AI_INTEGRATIONS_OPENAI_API_KEY` and `AI_INTEGRATIONS_OPENAI_BASE_URL` are used server-side for OpenAI calls
 - `DATABASE_URL` is required for Drizzle/PostgreSQL connection
 
+## Migration Notes (Replit Environment)
+
+- `tsx` was added as a dependency and installed to allow running TypeScript server files directly
+- `server/routes.ts` was updated to initialize the OpenAI client lazily inside a `getOpenAI()` helper function instead of at module load time, so the server starts cleanly even before `AI_INTEGRATIONS_OPENAI_API_KEY` is set
+- **Required secret:** `AI_INTEGRATIONS_OPENAI_API_KEY` must be set in Replit Secrets for transcription and chat features to work
+- **Workflows:** "Start Backend" runs `npm run server:dev` on port 5000 (webview); "Start Frontend" runs `npm run expo:dev`
+
 ## External Dependencies
 
 | Dependency | Purpose |
