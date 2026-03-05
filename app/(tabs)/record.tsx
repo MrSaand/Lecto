@@ -37,6 +37,9 @@ import { router } from "expo-router";
 
 const PENDING_KEY = "@lecto_pending_lecture";
 
+const SILENCE_WAV_B64 =
+  "UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICagICAgICagICAgICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagICagA==";
+
 type RecordState = "idle" | "recording" | "paused" | "processing";
 
 function formatTime(seconds: number): string {
@@ -86,6 +89,7 @@ export default function RecordScreen() {
 
   // Native recording ref
   const recordingRef = useRef<Audio.Recording | null>(null);
+  const silentSoundRef = useRef<Audio.Sound | null>(null);
   // Web recording refs
   const mediaRecorderRef = useRef<any>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -110,6 +114,30 @@ export default function RecordScreen() {
   };
 
   useEffect(() => () => stopTimer(), []);
+
+  const startSilentAudio = async () => {
+    if (Platform.OS !== "ios") return;
+    try {
+      await stopSilentAudio();
+      const silenceUri = FileSystem.cacheDirectory + "lecto_silence.wav";
+      await FileSystem.writeAsStringAsync(silenceUri, SILENCE_WAV_B64, { encoding: "base64" });
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: silenceUri },
+        { shouldPlay: true, isLooping: true, volume: 0, isMuted: true }
+      );
+      silentSoundRef.current = sound;
+    } catch {}
+  };
+
+  const stopSilentAudio = async () => {
+    if (silentSoundRef.current) {
+      try {
+        await silentSoundRef.current.stopAsync();
+        await silentSoundRef.current.unloadAsync();
+      } catch {}
+      silentSoundRef.current = null;
+    }
+  };
 
   // Track background entry time so we can restore the elapsed timer on foreground
   const recordStateRef = useRef<RecordState>("idle");
@@ -345,6 +373,7 @@ export default function RecordScreen() {
       setElapsed(0);
       setRecordState("recording");
       startTimer();
+      startSilentAudio();
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch (e: any) {
       Alert.alert("Error", "Could not start recording: " + (e?.message || String(e)));
@@ -356,6 +385,7 @@ export default function RecordScreen() {
       await recordingRef.current?.pauseAsync();
       setRecordState("paused");
       stopTimer();
+      stopSilentAudio();
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch (e) {}
   };
@@ -365,12 +395,14 @@ export default function RecordScreen() {
       await recordingRef.current?.startAsync();
       setRecordState("recording");
       startTimer();
+      startSilentAudio();
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch (e) {}
   };
 
   const stopNativeRecording = async (): Promise<{ base64: string; filename: string; uri: string }> => {
     if (!recordingRef.current) throw new Error("No recording in progress");
+    await stopSilentAudio();
     await recordingRef.current.stopAndUnloadAsync();
     const uri = recordingRef.current.getURI();
     recordingRef.current = null;

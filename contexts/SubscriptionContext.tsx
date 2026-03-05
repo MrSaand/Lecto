@@ -7,6 +7,7 @@ import { getApiUrl } from "@/lib/query-client";
 const API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY ?? "";
 const ENTITLEMENT_ID = "premium";
 const LOCAL_SUB_KEY = "@lecto_subscription";
+const USED_PROMO_KEY = "@lecto_used_promos";
 export const FREE_RECORDING_LIMIT = 2;
 
 export interface SubscriptionState {
@@ -36,6 +37,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [offering, setOffering] = useState<PurchasesOffering | null>(null);
   const [monthlyPackage, setMonthlyPackage] = useState<PurchasesPackage | null>(null);
   const [yearlyPackage, setYearlyPackage] = useState<PurchasesPackage | null>(null);
+  const [usedPromoCodes, setUsedPromoCodes] = useState<string[]>([]);
 
   const grantSubscription = async (expiresAt?: number) => {
     setIsSubscribed(true);
@@ -65,6 +67,11 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
             }
           }
         }
+      } catch {}
+
+      try {
+        const usedData = await AsyncStorage.getItem(USED_PROMO_KEY);
+        if (usedData) setUsedPromoCodes(JSON.parse(usedData));
       } catch {}
 
       try {
@@ -158,6 +165,10 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   };
 
   const redeemPromoCode = async (code: string): Promise<{ success: boolean; message: string; durationDays?: number }> => {
+    const normalized = code.trim().toUpperCase();
+    if (usedPromoCodes.includes(normalized)) {
+      return { success: false, message: "You have already used this promo code." };
+    }
     try {
       const baseUrl = getApiUrl();
       const response = await fetch(`${baseUrl}api/promo/redeem`, {
@@ -171,6 +182,9 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           ? undefined
           : Date.now() + data.durationDays * 24 * 60 * 60 * 1000;
         await grantSubscription(expiresAt);
+        const updated = [...usedPromoCodes, normalized];
+        setUsedPromoCodes(updated);
+        await AsyncStorage.setItem(USED_PROMO_KEY, JSON.stringify(updated));
         return { success: true, message: data.message, durationDays: data.durationDays };
       }
       return { success: false, message: data.message };

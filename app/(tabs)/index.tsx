@@ -27,6 +27,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  withSpring,
   runOnJS,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
@@ -325,7 +326,13 @@ function ItemActionsModal({
   const [displayPage, setDisplayPage] = useState<ItemActionsPage>("options");
   const [name, setName] = useState("");
   const pageOpacity = useSharedValue(1);
+  const sheetTranslateY = useSharedValue(500);
+  const backdropAlpha = useSharedValue(0);
+  const isClosingRef = React.useRef(false);
+
   const animatedPageStyle = useAnimatedStyle(() => ({ opacity: pageOpacity.value }));
+  const animatedSheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: sheetTranslateY.value }] }));
+  const animatedBackdropStyle = useAnimatedStyle(() => ({ opacity: backdropAlpha.value }));
 
   const navigateTo = (newPage: ItemActionsPage) => {
     pageOpacity.value = withTiming(0, { duration: 100 }, (done) => {
@@ -338,42 +345,53 @@ function ItemActionsModal({
 
   React.useEffect(() => {
     if (target) {
+      isClosingRef.current = false;
       setDisplayPage("options");
       pageOpacity.value = 1;
       setName(target.name);
+      backdropAlpha.value = withTiming(1, { duration: 200 });
+      sheetTranslateY.value = withSpring(0, { damping: 22, stiffness: 220 });
     }
   }, [target?.id]);
 
   const isFolder = target?.type === "folder";
 
-  const handleClose = () => {
-    setDisplayPage("options");
-    pageOpacity.value = 1;
-    onClose();
+  const handleClose = (afterClose?: () => void) => {
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
+    backdropAlpha.value = withTiming(0, { duration: 180 });
+    sheetTranslateY.value = withTiming(500, { duration: 220 }, (done) => {
+      if (done) {
+        runOnJS(setDisplayPage)("options");
+        pageOpacity.value = 1;
+        sheetTranslateY.value = 500;
+        backdropAlpha.value = 0;
+        runOnJS(onClose)();
+        if (afterClose) runOnJS(afterClose)();
+      }
+    });
   };
 
   const handleSave = () => {
     const trimmed = name.trim();
     if (!trimmed || !target) return;
     onRenameConfirm(target.id, target.type, trimmed);
-    setDisplayPage("options");
-    pageOpacity.value = 1;
-    onClose();
+    handleClose();
   };
 
   const handleDeleteConfirm = () => {
     if (!target) return;
     onDeleteConfirm(target);
-    setDisplayPage("options");
-    pageOpacity.value = 1;
-    onClose();
+    handleClose();
   };
 
   return (
-    <Modal visible={!!target} transparent animationType="slide" onRequestClose={handleClose} statusBarTranslucent>
+    <Modal visible={!!target} transparent animationType="none" onRequestClose={handleClose} statusBarTranslucent>
       <KeyboardAvoidingView style={styles.modalBackdrop} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={handleClose} />
-        <View style={[styles.modalSheet, { backgroundColor: theme.card }]}>
+        <Animated.View style={[{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }, animatedBackdropStyle]}>
+          <Pressable style={{ flex: 1 }} onPress={() => handleClose()} />
+        </Animated.View>
+        <Animated.View style={[styles.modalSheet, { backgroundColor: theme.card }, animatedSheetStyle]}>
           <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
 
           <Animated.View style={animatedPageStyle}>
@@ -396,12 +414,12 @@ function ItemActionsModal({
                     <Text style={[styles.optionRowText, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>Rename</Text>
                     <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
                   </Pressable>
-                  <Pressable onPress={() => { const t = target!; handleClose(); setTimeout(() => onMove(t), 50); }} style={({ pressed }) => [styles.optionRow, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }]}>
+                  <Pressable onPress={() => { const t = target!; handleClose(() => onMove(t)); }} style={({ pressed }) => [styles.optionRow, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }]}>
                     <View style={[styles.optionRowIcon, { backgroundColor: Colors.mint + "14" }]}><Ionicons name="folder-open-outline" size={16} color={Colors.mint} /></View>
                     <Text style={[styles.optionRowText, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>Move to Folder</Text>
                     <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
                   </Pressable>
-                  <Pressable onPress={() => { const t = target!; handleClose(); setTimeout(() => onShare(t), 50); }} style={({ pressed }) => [styles.optionRow, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }]}>
+                  <Pressable onPress={() => { const t = target!; handleClose(() => onShare(t)); }} style={({ pressed }) => [styles.optionRow, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }]}>
                     <View style={[styles.optionRowIcon, { backgroundColor: Colors.indigoLight + "18" }]}><Ionicons name="share-outline" size={16} color={Colors.indigoLight} /></View>
                     <Text style={[styles.optionRowText, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>{isFolder ? "Share Folder" : "Share"}</Text>
                     <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
@@ -485,7 +503,7 @@ function ItemActionsModal({
               </>
             )}
           </Animated.View>
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );
