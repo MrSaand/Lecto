@@ -8,6 +8,8 @@ import {
   Platform,
   Alert,
   ScrollView,
+  AppState,
+  AppStateStatus,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -108,6 +110,19 @@ export default function RecordScreen() {
   };
 
   useEffect(() => () => stopTimer(), []);
+
+  // Resume keep-awake when app returns to foreground during recording
+  const recordStateRef = useRef<RecordState>("idle");
+  recordStateRef.current = recordState;
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    const sub = AppState.addEventListener("change", async (next: AppStateStatus) => {
+      if (next === "active" && recordStateRef.current === "recording") {
+        try { await activateKeepAwakeAsync(); } catch {}
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   // ─── Web recording via MediaRecorder ───────────────────────────────────────
   const startWebRecording = async () => {

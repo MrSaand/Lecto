@@ -295,194 +295,174 @@ function CreateFolderModal({
   );
 }
 
-// ─── Rename Modal ──────────────────────────────────────────────────────────────
-function RenameModal({
-  target,
-  theme,
-  onCancel,
-  onRename,
-}: {
-  target: { id: string; type: "recording" | "folder"; currentName: string } | null;
-  theme: typeof Colors.light;
-  onCancel: () => void;
-  onRename: (id: string, type: "recording" | "folder", newName: string) => void;
-}) {
-  const [name, setName] = useState(target?.currentName ?? "");
+// ─── Item Actions Modal (Options + Rename + Delete — single modal, page nav) ───
+type ItemActionsPage = "options" | "rename" | "delete";
 
-  React.useEffect(() => {
-    if (target) setName(target.currentName);
-  }, [target?.id]);
-
-  const handleSave = () => {
-    const trimmed = name.trim();
-    if (!trimmed || !target) return;
-    onRename(target.id, target.type, trimmed);
-  };
-
-  return (
-    <Modal visible={!!target} transparent animationType="slide" onRequestClose={onCancel} statusBarTranslucent>
-      <KeyboardAvoidingView style={styles.modalBackdrop} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={onCancel} />
-        <View style={[styles.modalSheet, { backgroundColor: theme.card }]}>
-          <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
-          <View style={styles.sheetHeader}>
-            <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
-              Rename {target?.type === "folder" ? "Folder" : "Lecture"}
-            </Text>
-            <Pressable onPress={onCancel} style={styles.sheetClose}>
-              <Ionicons name="close" size={22} color={theme.textSecondary} />
-            </Pressable>
-          </View>
-          <View style={styles.inputSection}>
-            <TextInput
-              style={[styles.nameInput, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border, fontFamily: "DMSans_400Regular" }]}
-              placeholder="New name"
-              placeholderTextColor={theme.textTertiary}
-              value={name}
-              onChangeText={setName}
-              autoFocus
-              selectTextOnFocus
-              returnKeyType="done"
-              onSubmitEditing={handleSave}
-            />
-            <Pressable
-              onPress={handleSave}
-              style={({ pressed }) => [styles.createBtn, { backgroundColor: name.trim() ? Colors.indigo : theme.border, opacity: pressed ? 0.8 : 1 }]}
-            >
-              <Feather name="check" size={18} color={name.trim() ? "#fff" : theme.textTertiary} />
-              <Text style={[styles.createBtnText, { color: name.trim() ? "#fff" : theme.textTertiary, fontFamily: "DMSans_700Bold" }]}>
-                Save
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
-  );
-}
-
-// ─── Options Sheet ─────────────────────────────────────────────────────────────
-function OptionsSheet({
+function ItemActionsModal({
   target,
   theme,
   onClose,
-  onRename,
   onMove,
-  onDelete,
   onShare,
+  onRenameConfirm,
+  onDeleteConfirm,
 }: {
   target: OptionsTarget | null;
   theme: typeof Colors.light;
   onClose: () => void;
-  onRename: () => void;
-  onMove: () => void;
-  onDelete: () => void;
-  onShare: () => void;
+  onMove: (target: OptionsTarget) => void;
+  onShare: (target: OptionsTarget) => void;
+  onRenameConfirm: (id: string, type: "recording" | "folder", name: string) => void;
+  onDeleteConfirm: (target: OptionsTarget) => void;
 }) {
+  const [page, setPage] = useState<ItemActionsPage>("options");
+  const [name, setName] = useState("");
+
+  React.useEffect(() => {
+    if (target) {
+      setPage("options");
+      setName(target.name);
+    }
+  }, [target?.id]);
+
   const isFolder = target?.type === "folder";
 
-  return (
-    <Modal visible={!!target} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
-      <View style={styles.modalBackdrop}>
-        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={onClose} />
-        <View style={[styles.modalSheet, { backgroundColor: theme.card }]}>
-          <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
-          <View style={styles.sheetHeader}>
-            <View style={styles.optionsTargetInfo}>
-              <View style={[styles.optionsIcon, { backgroundColor: isFolder ? Colors.indigo + "16" : Colors.coral + "16" }]}>
-                <Ionicons name={isFolder ? "folder" : "radio"} size={18} color={isFolder ? Colors.indigo : Colors.coral} />
-              </View>
-              <Text style={[styles.optionsTargetName, { color: theme.text, fontFamily: "DMSans_700Bold" }]} numberOfLines={2}>
-                {target?.name}
-              </Text>
-            </View>
-          </View>
-          <View style={[styles.optionsList, { borderTopColor: theme.border }]}>
-            <Pressable onPress={onRename} style={({ pressed }) => [styles.optionRow, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }]}>
-              <View style={[styles.optionRowIcon, { backgroundColor: Colors.indigo + "14" }]}>
-                <Feather name="edit-2" size={16} color={Colors.indigo} />
-              </View>
-              <Text style={[styles.optionRowText, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>Rename</Text>
-              <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
-            </Pressable>
-            <Pressable onPress={onMove} style={({ pressed }) => [styles.optionRow, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }]}>
-              <View style={[styles.optionRowIcon, { backgroundColor: Colors.mint + "14" }]}>
-                <Ionicons name="folder-open-outline" size={16} color={Colors.mint} />
-              </View>
-              <Text style={[styles.optionRowText, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>Move to Folder</Text>
-              <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
-            </Pressable>
-            <Pressable onPress={onShare} style={({ pressed }) => [styles.optionRow, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }]}>
-              <View style={[styles.optionRowIcon, { backgroundColor: Colors.indigoLight + "18" }]}>
-                <Ionicons name="share-outline" size={16} color={Colors.indigoLight} />
-              </View>
-              <Text style={[styles.optionRowText, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>
-                {isFolder ? "Share Folder" : "Share"}
-              </Text>
-              <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
-            </Pressable>
-            <Pressable onPress={onDelete} style={({ pressed }) => [styles.optionRow, { borderBottomColor: "transparent", opacity: pressed ? 0.7 : 1 }]}>
-              <View style={[styles.optionRowIcon, { backgroundColor: Colors.coral + "14" }]}>
-                <Feather name="trash-2" size={16} color={Colors.coral} />
-              </View>
-              <Text style={[styles.optionRowText, { color: Colors.coral, fontFamily: "DMSans_500Medium" }]}>Delete</Text>
-              <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
-            </Pressable>
-          </View>
-          <View style={{ height: 24 }} />
-        </View>
-      </View>
-    </Modal>
-  );
-}
+  const handleClose = () => {
+    setPage("options");
+    onClose();
+  };
 
-// ─── Delete Confirm Modal ──────────────────────────────────────────────────────
-function DeleteConfirmModal({
-  target,
-  isFolder,
-  theme,
-  onCancel,
-  onConfirm,
-}: {
-  target: OptionsTarget | null;
-  isFolder: boolean;
-  theme: typeof Colors.light;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
+  const handleSave = () => {
+    const trimmed = name.trim();
+    if (!trimmed || !target) return;
+    onRenameConfirm(target.id, target.type, trimmed);
+    setPage("options");
+    onClose();
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!target) return;
+    onDeleteConfirm(target);
+    setPage("options");
+    onClose();
+  };
+
   return (
-    <Modal visible={!!target} transparent animationType="slide" onRequestClose={onCancel} statusBarTranslucent>
-      <View style={styles.modalBackdrop}>
-        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={onCancel} />
+    <Modal visible={!!target} transparent animationType="slide" onRequestClose={handleClose} statusBarTranslucent>
+      <KeyboardAvoidingView style={styles.modalBackdrop} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={handleClose} />
         <View style={[styles.modalSheet, { backgroundColor: theme.card }]}>
           <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
-          <View style={styles.deleteSheetBody}>
-            <View style={[styles.deleteIconWrap, { backgroundColor: Colors.coral + "14" }]}>
-              <Feather name="trash-2" size={28} color={Colors.coral} />
-            </View>
-            <Text style={[styles.deleteTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
-              Delete {isFolder ? "Folder" : "Lecture"}?
-            </Text>
-            <Text style={[styles.deleteSubtitle, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
-              {target?.name}
-            </Text>
-            <Text style={[styles.deleteWarning, { color: theme.textTertiary, fontFamily: "DMSans_400Regular" }]}>
-              {isFolder
-                ? "The folder will be deleted. Any lectures inside will be moved to the parent folder."
-                : "This lecture and its notes will be permanently deleted. This cannot be undone."}
-            </Text>
-          </View>
-          <View style={styles.deleteActions}>
-            <Pressable onPress={onCancel} style={({ pressed }) => [styles.cancelBtn, { backgroundColor: theme.border, opacity: pressed ? 0.7 : 1 }]}>
-              <Text style={[styles.cancelBtnText, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>Cancel</Text>
-            </Pressable>
-            <Pressable onPress={onConfirm} style={({ pressed }) => [styles.confirmDeleteBtn, { backgroundColor: Colors.coral, opacity: pressed ? 0.8 : 1 }]}>
-              <Feather name="trash-2" size={16} color="#fff" />
-              <Text style={[styles.confirmDeleteBtnText, { fontFamily: "DMSans_700Bold" }]}>Delete</Text>
-            </Pressable>
-          </View>
+
+          {/* ── Options page ── */}
+          {page === "options" && (
+            <>
+              <View style={styles.sheetHeader}>
+                <View style={styles.optionsTargetInfo}>
+                  <View style={[styles.optionsIcon, { backgroundColor: isFolder ? Colors.indigo + "16" : Colors.coral + "16" }]}>
+                    <Ionicons name={isFolder ? "folder" : "radio"} size={18} color={isFolder ? Colors.indigo : Colors.coral} />
+                  </View>
+                  <Text style={[styles.optionsTargetName, { color: theme.text, fontFamily: "DMSans_700Bold" }]} numberOfLines={2}>
+                    {target?.name}
+                  </Text>
+                </View>
+              </View>
+              <View style={[styles.optionsList, { borderTopColor: theme.border }]}>
+                <Pressable onPress={() => setPage("rename")} style={({ pressed }) => [styles.optionRow, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }]}>
+                  <View style={[styles.optionRowIcon, { backgroundColor: Colors.indigo + "14" }]}><Feather name="edit-2" size={16} color={Colors.indigo} /></View>
+                  <Text style={[styles.optionRowText, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>Rename</Text>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
+                </Pressable>
+                <Pressable onPress={() => { const t = target!; handleClose(); setTimeout(() => onMove(t), 50); }} style={({ pressed }) => [styles.optionRow, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }]}>
+                  <View style={[styles.optionRowIcon, { backgroundColor: Colors.mint + "14" }]}><Ionicons name="folder-open-outline" size={16} color={Colors.mint} /></View>
+                  <Text style={[styles.optionRowText, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>Move to Folder</Text>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
+                </Pressable>
+                <Pressable onPress={() => { const t = target!; handleClose(); setTimeout(() => onShare(t), 50); }} style={({ pressed }) => [styles.optionRow, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }]}>
+                  <View style={[styles.optionRowIcon, { backgroundColor: Colors.indigoLight + "18" }]}><Ionicons name="share-outline" size={16} color={Colors.indigoLight} /></View>
+                  <Text style={[styles.optionRowText, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>{isFolder ? "Share Folder" : "Share"}</Text>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
+                </Pressable>
+                <Pressable onPress={() => setPage("delete")} style={({ pressed }) => [styles.optionRow, { borderBottomColor: "transparent", opacity: pressed ? 0.7 : 1 }]}>
+                  <View style={[styles.optionRowIcon, { backgroundColor: Colors.coral + "14" }]}><Feather name="trash-2" size={16} color={Colors.coral} /></View>
+                  <Text style={[styles.optionRowText, { color: Colors.coral, fontFamily: "DMSans_500Medium" }]}>Delete</Text>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
+                </Pressable>
+              </View>
+              <View style={{ height: 24 }} />
+            </>
+          )}
+
+          {/* ── Rename page ── */}
+          {page === "rename" && (
+            <>
+              <View style={styles.sheetHeader}>
+                <Pressable onPress={() => setPage("options")} style={styles.sheetClose}>
+                  <Ionicons name="chevron-back" size={22} color={theme.textSecondary} />
+                </Pressable>
+                <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
+                  Rename {isFolder ? "Folder" : "Lecture"}
+                </Text>
+                <Pressable onPress={handleClose} style={styles.sheetClose}>
+                  <Ionicons name="close" size={22} color={theme.textSecondary} />
+                </Pressable>
+              </View>
+              <View style={styles.inputSection}>
+                <TextInput
+                  style={[styles.nameInput, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border, fontFamily: "DMSans_400Regular" }]}
+                  placeholder="New name"
+                  placeholderTextColor={theme.textTertiary}
+                  value={name}
+                  onChangeText={setName}
+                  autoFocus
+                  selectTextOnFocus
+                  returnKeyType="done"
+                  onSubmitEditing={handleSave}
+                />
+                <Pressable
+                  onPress={handleSave}
+                  style={({ pressed }) => [styles.createBtn, { backgroundColor: name.trim() ? Colors.indigo : theme.border, opacity: pressed ? 0.8 : 1 }]}
+                >
+                  <Feather name="check" size={18} color={name.trim() ? "#fff" : theme.textTertiary} />
+                  <Text style={[styles.createBtnText, { color: name.trim() ? "#fff" : theme.textTertiary, fontFamily: "DMSans_700Bold" }]}>Save</Text>
+                </Pressable>
+              </View>
+            </>
+          )}
+
+          {/* ── Delete confirm page ── */}
+          {page === "delete" && (
+            <>
+              <View style={styles.sheetHandle} />
+              <View style={styles.deleteSheetBody}>
+                <View style={[styles.deleteIconWrap, { backgroundColor: Colors.coral + "14" }]}>
+                  <Feather name="trash-2" size={28} color={Colors.coral} />
+                </View>
+                <Text style={[styles.deleteTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
+                  Delete {isFolder ? "Folder" : "Lecture"}?
+                </Text>
+                <Text style={[styles.deleteSubtitle, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
+                  {target?.name}
+                </Text>
+                <Text style={[styles.deleteWarning, { color: theme.textTertiary, fontFamily: "DMSans_400Regular" }]}>
+                  {isFolder
+                    ? "The folder will be deleted. Any lectures inside will be moved to the parent folder."
+                    : "This lecture and its notes will be permanently deleted. This cannot be undone."}
+                </Text>
+              </View>
+              <View style={styles.deleteActions}>
+                <Pressable onPress={() => setPage("options")} style={({ pressed }) => [styles.cancelBtn, { backgroundColor: theme.border, opacity: pressed ? 0.7 : 1 }]}>
+                  <Text style={[styles.cancelBtnText, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>Cancel</Text>
+                </Pressable>
+                <Pressable onPress={handleDeleteConfirm} style={({ pressed }) => [styles.confirmDeleteBtn, { backgroundColor: Colors.coral, opacity: pressed ? 0.8 : 1 }]}>
+                  <Feather name="trash-2" size={16} color="#fff" />
+                  <Text style={[styles.confirmDeleteBtnText, { fontFamily: "DMSans_700Bold" }]}>Delete</Text>
+                </Pressable>
+              </View>
+            </>
+          )}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -533,7 +513,7 @@ function SettingsModal({ visible, onClose, onPaywall, theme }: {
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose} statusBarTranslucent>
-      <View style={styles.modalBackdrop}>
+      <KeyboardAvoidingView style={styles.modalBackdrop} behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={handleClose} />
         <View style={[styles.modalSheet, { backgroundColor: theme.card }]}>
           <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
@@ -666,7 +646,7 @@ function SettingsModal({ visible, onClose, onPaywall, theme }: {
             </>
           )}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -686,8 +666,6 @@ export default function LibraryScreen() {
   const [folderStack, setFolderStack] = useState<FolderCrumb[]>([]);
   const [movingItem, setMovingItem] = useState<MovingItem | null>(null);
   const [optionsTarget, setOptionsTarget] = useState<OptionsTarget | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<OptionsTarget | null>(null);
-  const [renameTarget, setRenameTarget] = useState<{ id: string; type: "recording" | "folder"; currentName: string } | null>(null);
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
@@ -777,67 +755,11 @@ export default function LibraryScreen() {
   };
 
   // ── Options actions ─────────────────────────────────────────────────────────
-  const handleOptionsRename = () => {
-    if (!optionsTarget) return;
-    const target = optionsTarget;
-    setOptionsTarget(null);
-    setTimeout(() => setRenameTarget({ id: target.id, type: target.type, currentName: target.name }), 320);
-  };
-
-  const handleOptionsMove = () => {
-    if (!optionsTarget) return;
-    startMove({ id: optionsTarget.id, type: optionsTarget.type, name: optionsTarget.name });
-  };
-
-  const handleOptionsDelete = () => {
-    if (!optionsTarget) return;
-    const target = optionsTarget;
-    setOptionsTarget(null);
-    setTimeout(() => setDeleteTarget(target), 320);
-  };
-
-  const handleOptionsShare = async () => {
-    if (!optionsTarget) return;
-    setOptionsTarget(null);
-    try {
-      if (optionsTarget.type === "recording") {
-        const rec = recordings.find((r) => r.id === optionsTarget.id);
-        if (!rec) return;
-        await shareRecordingAsPdf(rec);
-      } else {
-        const recsInFolder = getAllRecordingsInFolder(optionsTarget.id);
-        await shareFolderAsPdf(optionsTarget.name, recsInFolder);
-      }
-    } catch (e: any) {
-      if (!e?.message?.toLowerCase().includes("cancel")) {
-        console.error("Share error:", e);
-      }
-    }
-  };
-
   function getAllRecordingsInFolder(folderId: string): Recording[] {
     const direct = recordings.filter((r) => r.folderId === folderId);
     const subFolders = folders.filter((f) => f.parentId === folderId);
     return [...direct, ...subFolders.flatMap((sf) => getAllRecordingsInFolder(sf.id))];
   }
-
-  const handleDeleteConfirm = async () => {
-    if (!deleteTarget) return;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    if (deleteTarget.type === "recording") {
-      await deleteRecording(deleteTarget.id);
-    } else {
-      await deleteFolder(deleteTarget.id);
-    }
-    setDeleteTarget(null);
-  };
-
-  const handleRename = async (id: string, type: "recording" | "folder", newName: string) => {
-    if (type === "recording") await renameRecording(id, newName);
-    else await renameFolder(id, newName);
-    setRenameTarget(null);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  };
 
   const handleCreateFolder = async (name: string) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -1037,22 +959,33 @@ export default function LibraryScreen() {
 
       {/* Modals */}
       <CreateFolderModal visible={showNewFolder} theme={theme} onCancel={() => setShowNewFolder(false)} onCreate={handleCreateFolder} />
-      <RenameModal target={renameTarget} theme={theme} onCancel={() => setRenameTarget(null)} onRename={handleRename} />
-      <OptionsSheet
+      <ItemActionsModal
         target={optionsTarget}
         theme={theme}
         onClose={() => setOptionsTarget(null)}
-        onRename={handleOptionsRename}
-        onMove={handleOptionsMove}
-        onDelete={handleOptionsDelete}
-        onShare={handleOptionsShare}
-      />
-      <DeleteConfirmModal
-        target={deleteTarget}
-        isFolder={deleteTarget?.type === "folder"}
-        theme={theme}
-        onCancel={() => setDeleteTarget(null)}
-        onConfirm={handleDeleteConfirm}
+        onMove={(t) => startMove({ id: t.id, type: t.type, name: t.name })}
+        onShare={async (t) => {
+          try {
+            if (t.type === "recording") {
+              const rec = recordings.find((r) => r.id === t.id);
+              if (rec) await shareRecordingAsPdf(rec);
+            } else {
+              await shareFolderAsPdf(t.name, getAllRecordingsInFolder(t.id));
+            }
+          } catch (e: any) {
+            if (!e?.message?.toLowerCase().includes("cancel")) console.error("Share error:", e);
+          }
+        }}
+        onRenameConfirm={async (id, type, newName) => {
+          if (type === "recording") await renameRecording(id, newName);
+          else await renameFolder(id, newName);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }}
+        onDeleteConfirm={async (t) => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+          if (t.type === "recording") await deleteRecording(t.id);
+          else await deleteFolder(t.id);
+        }}
       />
       <SettingsModal visible={showSettings} onClose={() => setShowSettings(false)} onPaywall={() => setShowPaywall(true)} theme={theme} />
       <Paywall visible={showPaywall} onClose={() => setShowPaywall(false)} />
