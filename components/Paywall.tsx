@@ -9,6 +9,7 @@ import {
   useColorScheme,
   ActivityIndicator,
   Platform,
+  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -122,20 +123,19 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
   const bottomInset = isWeb ? 34 : insets.bottom;
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
       <View style={styles.backdrop}>
-        <Animated.View entering={FadeIn.duration(280)} style={[styles.sheet, { backgroundColor: theme.background }]}>
+        <View style={[styles.sheet, { backgroundColor: theme.background }]}>
           <Pressable onPress={onClose} style={[styles.closeBtn, { backgroundColor: theme.card }]}>
             <Ionicons name="close" size={20} color={theme.textSecondary} />
           </Pressable>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bottomInset + 16 }}>
-            <Animated.View entering={FadeIn.delay(100).duration(400)} style={styles.heroSection}>
-              <View style={[styles.heroIconWrap, { backgroundColor: Colors.indigo + "20" }]}>
-                <View style={[styles.heroIconInner, { backgroundColor: Colors.indigo }]}>
-                  <Ionicons name="mic" size={32} color="#fff" />
-                </View>
-              </View>
+            <Animated.View entering={FadeIn.delay(80).duration(350)} style={styles.heroSection}>
+              <Image
+                source={require("../assets/images/icon.png")}
+                style={styles.appIcon}
+              />
               <Text style={[styles.heroTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
                 Lecto Pro
               </Text>
@@ -146,7 +146,7 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
               </Text>
             </Animated.View>
 
-            <Animated.View entering={FadeIn.delay(150).duration(400)} style={styles.featuresSection}>
+            <Animated.View entering={FadeIn.delay(150).duration(350)} style={styles.featuresSection}>
               {FEATURES.map((f, i) => (
                 <View key={i} style={styles.featureRow}>
                   <View style={[styles.featureIcon, { backgroundColor: Colors.indigo + "16" }]}>
@@ -157,7 +157,7 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
               ))}
             </Animated.View>
 
-            <Animated.View entering={FadeIn.delay(200).duration(400)} style={styles.plansSection}>
+            <Animated.View entering={FadeIn.delay(210).duration(350)} style={styles.plansSection}>
               <Pressable
                 onPress={() => { Haptics.selectionAsync(); setSelectedPlan("yearly"); }}
                 style={[
@@ -212,7 +212,7 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
               </Text>
             ) : null}
 
-            <Animated.View entering={FadeIn.delay(250).duration(400)} style={styles.ctaSection}>
+            <Animated.View entering={FadeIn.delay(270).duration(350)} style={styles.ctaSection}>
               {isWeb ? (
                 <View style={[styles.webNotice, { backgroundColor: theme.card, borderColor: theme.border }]}>
                   <Ionicons name="phone-portrait-outline" size={22} color={Colors.indigo} />
@@ -263,7 +263,7 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
               )}
             </Animated.View>
           </ScrollView>
-        </Animated.View>
+        </View>
       </View>
     </Modal>
   );
@@ -292,9 +292,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     zIndex: 10,
   },
-  heroSection: { alignItems: "center", paddingTop: 48, paddingBottom: 24, paddingHorizontal: 24, gap: 12 },
-  heroIconWrap: { width: 88, height: 88, borderRadius: 28, alignItems: "center", justifyContent: "center", marginBottom: 4 },
-  heroIconInner: { width: 68, height: 68, borderRadius: 20, alignItems: "center", justifyContent: "center" },
+  heroSection: { alignItems: "center", paddingTop: 40, paddingBottom: 20, paddingHorizontal: 24, gap: 10 },
+  appIcon: { width: 80, height: 80, borderRadius: 18, marginBottom: 4 },
   heroTitle: { fontSize: 28, letterSpacing: -0.5 },
   heroSubtitle: { fontSize: 15, textAlign: "center", lineHeight: 22, maxWidth: 300 },
   featuresSection: { paddingHorizontal: 24, paddingBottom: 20, gap: 12 },

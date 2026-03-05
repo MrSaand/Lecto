@@ -779,8 +779,9 @@ export default function LibraryScreen() {
   // ── Options actions ─────────────────────────────────────────────────────────
   const handleOptionsRename = () => {
     if (!optionsTarget) return;
-    setRenameTarget({ id: optionsTarget.id, type: optionsTarget.type, currentName: optionsTarget.name });
+    const target = optionsTarget;
     setOptionsTarget(null);
+    setTimeout(() => setRenameTarget({ id: target.id, type: target.type, currentName: target.name }), 320);
   };
 
   const handleOptionsMove = () => {
@@ -790,8 +791,9 @@ export default function LibraryScreen() {
 
   const handleOptionsDelete = () => {
     if (!optionsTarget) return;
-    setDeleteTarget(optionsTarget);
+    const target = optionsTarget;
     setOptionsTarget(null);
+    setTimeout(() => setDeleteTarget(target), 320);
   };
 
   const handleOptionsShare = async () => {
