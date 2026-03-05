@@ -223,17 +223,17 @@ async function shareWebPdf(
   const safeFilename = filename.replace(/[^a-z0-9]/gi, "_");
   const file = new File([blob], `${safeFilename}.pdf`, { type: "application/pdf" });
 
+  const blobUrl = URL.createObjectURL(blob);
   if (typeof navigator !== "undefined" && navigator.share && navigator.canShare?.({ files: [file] })) {
-    await navigator.share({ files: [file] });
+    try {
+      await navigator.share({ files: [file] });
+    } catch {
+      window.open(blobUrl, "_blank");
+    }
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
   } else {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${safeFilename}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    window.open(blobUrl, "_blank");
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
   }
 }
 

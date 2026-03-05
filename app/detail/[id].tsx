@@ -423,9 +423,9 @@ export default function DetailScreen() {
       )}
 
       {/* Rename modal */}
-      <Modal visible={showRename} transparent animationType="none" onRequestClose={() => setShowRename(false)} statusBarTranslucent>
+      <Modal visible={showRename} transparent animationType="slide" onRequestClose={() => setShowRename(false)} statusBarTranslucent>
         <Pressable style={styles.renameBackdrop} onPress={() => setShowRename(false)}>
-          <Animated.View entering={SlideInDown.springify().damping(20)} style={[styles.renameSheet, { backgroundColor: theme.card }]}>
+          <View style={[styles.renameSheet, { backgroundColor: theme.card }]}>
             <Pressable>
               <View style={styles.renameHandle}>
                 <View style={[styles.renameHandleBar, { backgroundColor: theme.border }]} />
@@ -467,7 +467,7 @@ export default function DetailScreen() {
                 </Pressable>
               </View>
             </Pressable>
-          </Animated.View>
+          </View>
         </Pressable>
       </Modal>
 
@@ -475,7 +475,7 @@ export default function DetailScreen() {
       <Modal
         visible={showDeleteConfirm}
         transparent
-        animationType="none"
+        animationType="slide"
         onRequestClose={() => setShowDeleteConfirm(false)}
         statusBarTranslucent
       >
@@ -483,8 +483,7 @@ export default function DetailScreen() {
           style={styles.deleteBackdrop}
           onPress={() => setShowDeleteConfirm(false)}
         >
-          <Animated.View
-            entering={SlideInDown.springify().damping(20)}
+          <View
             style={[styles.deleteSheet, { backgroundColor: theme.card }]}
           >
             <Pressable>
@@ -523,7 +522,7 @@ export default function DetailScreen() {
                 </Pressable>
               </View>
             </Pressable>
-          </Animated.View>
+          </View>
         </Pressable>
       </Modal>
     </View>
