@@ -258,7 +258,7 @@ function CreateFolderModal({
     <Modal visible={visible} transparent animationType="none" onRequestClose={onCancel} statusBarTranslucent>
       <View style={styles.modalBackdrop}>
         <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={onCancel} />
-        <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
+        <View style={[styles.modalSheet, { backgroundColor: theme.card }]}>
           <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
           <View style={styles.sheetHeader}>
             <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>New Folder</Text>
@@ -288,7 +288,7 @@ function CreateFolderModal({
               </Text>
             </Pressable>
           </View>
-        </Animated.View>
+        </View>
       </View>
     </Modal>
   );
@@ -322,7 +322,7 @@ function RenameModal({
     <Modal visible={!!target} transparent animationType="none" onRequestClose={onCancel} statusBarTranslucent>
       <View style={styles.modalBackdrop}>
         <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={onCancel} />
-        <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
+        <View style={[styles.modalSheet, { backgroundColor: theme.card }]}>
           <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
           <View style={styles.sheetHeader}>
             <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
@@ -354,7 +354,7 @@ function RenameModal({
               </Text>
             </Pressable>
           </View>
-        </Animated.View>
+        </View>
       </View>
     </Modal>
   );
@@ -384,7 +384,7 @@ function OptionsSheet({
     <Modal visible={!!target} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <View style={styles.modalBackdrop}>
         <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={onClose} />
-        <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
+        <View style={[styles.modalSheet, { backgroundColor: theme.card }]}>
           <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
           <View style={styles.sheetHeader}>
             <View style={styles.optionsTargetInfo}>
@@ -429,7 +429,7 @@ function OptionsSheet({
             </Pressable>
           </View>
           <View style={{ height: 24 }} />
-        </Animated.View>
+        </View>
       </View>
     </Modal>
   );
@@ -453,7 +453,7 @@ function DeleteConfirmModal({
     <Modal visible={!!target} transparent animationType="none" onRequestClose={onCancel} statusBarTranslucent>
       <View style={styles.modalBackdrop}>
         <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={onCancel} />
-        <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
+        <View style={[styles.modalSheet, { backgroundColor: theme.card }]}>
           <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
           <View style={styles.deleteSheetBody}>
             <View style={[styles.deleteIconWrap, { backgroundColor: Colors.coral + "14" }]}>
@@ -480,263 +480,193 @@ function DeleteConfirmModal({
               <Text style={[styles.confirmDeleteBtnText, { fontFamily: "DMSans_700Bold" }]}>Delete</Text>
             </Pressable>
           </View>
-        </Animated.View>
-      </View>
-    </Modal>
-  );
-}
-
-// ─── Language Picker Sub-Sheet ─────────────────────────────────────────────────
-function LanguagePickerModal({ visible, onClose, theme }: { visible: boolean; onClose: () => void; theme: typeof Colors.light }) {
-  const { language, setLanguage } = useSettings();
-  return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
-      <View style={styles.modalBackdrop}>
-        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={onClose} />
-        <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
-          <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
-          <View style={styles.sheetHeader}>
-            <Pressable onPress={onClose} style={styles.sheetClose}>
-              <Ionicons name="chevron-down" size={22} color={theme.textSecondary} />
-            </Pressable>
-            <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>AI Language</Text>
-            <View style={styles.sheetClose} />
-          </View>
-          <Text style={[styles.settingsHint, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
-            Controls transcription, summaries, and chat
-          </Text>
-          <ScrollView style={styles.langList} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-            {LANGUAGES.map((lang) => {
-              const isSelected = language.code === lang.code;
-              return (
-                <Pressable
-                  key={lang.code}
-                  onPress={() => { Haptics.selectionAsync(); setLanguage(lang); onClose(); }}
-                  style={({ pressed }) => [styles.langRow, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }, isSelected && { backgroundColor: Colors.indigo + "0E" }]}
-                >
-                  <View style={styles.langBadge}>
-                    <Text style={[styles.langCode, { color: Colors.indigo, fontFamily: "DMSans_700Bold" }]}>{lang.code.toUpperCase()}</Text>
-                  </View>
-                  <View style={styles.langInfo}>
-                    <Text style={[styles.langName, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>{lang.name}</Text>
-                    <Text style={[styles.langNative, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>{lang.nativeName}</Text>
-                  </View>
-                  {isSelected && <Ionicons name="checkmark-circle" size={22} color={Colors.indigo} />}
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </Animated.View>
-      </View>
-    </Modal>
-  );
-}
-
-// ─── Promo Code Sub-Sheet ──────────────────────────────────────────────────────
-function PromoCodeModal({ visible, onClose, theme }: { visible: boolean; onClose: () => void; theme: typeof Colors.light }) {
-  const { redeemPromoCode } = useSubscription();
-  const [code, setCode] = useState("");
-  const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const handleRedeem = async () => {
-    if (!code.trim()) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setLoading(true);
-    setStatus(null);
-    const result = await redeemPromoCode(code);
-    setLoading(false);
-    setStatus({ type: result.success ? "success" : "error", message: result.message });
-    if (result.success) setCode("");
-  };
-
-  const handleClose = () => {
-    setCode("");
-    setStatus(null);
-    onClose();
-  };
-
-  return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose} statusBarTranslucent>
-      <View style={styles.modalBackdrop}>
-        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={handleClose} />
-        <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
-          <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
-          <View style={styles.sheetHeader}>
-            <Pressable onPress={handleClose} style={styles.sheetClose}>
-              <Ionicons name="chevron-down" size={22} color={theme.textSecondary} />
-            </Pressable>
-            <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>Promo Code</Text>
-            <View style={styles.sheetClose} />
-          </View>
-
-          <View style={styles.promoBody}>
-            <View style={[styles.promoIconWrap, { backgroundColor: Colors.coral + "18" }]}>
-              <Ionicons name="gift-outline" size={36} color={Colors.coral} />
-            </View>
-            <Text style={[styles.promoTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
-              Have a promo code?
-            </Text>
-            <Text style={[styles.promoDesc, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
-              Enter your code below to unlock Lecto Pro access.
-            </Text>
-
-            <TextInput
-              style={[styles.promoInput, { backgroundColor: theme.background, borderColor: theme.border, color: theme.text, fontFamily: "DMSans_500Medium" }]}
-              placeholder="Enter code"
-              placeholderTextColor={theme.textTertiary}
-              value={code}
-              onChangeText={(t) => { setCode(t); setStatus(null); }}
-              autoCapitalize="characters"
-              autoCorrect={false}
-              returnKeyType="done"
-              onSubmitEditing={handleRedeem}
-            />
-
-            {status && (
-              <Animated.View entering={FadeIn.duration(200)} style={[styles.promoStatus, { backgroundColor: status.type === "success" ? Colors.mint + "18" : Colors.coral + "18", borderColor: status.type === "success" ? Colors.mint + "40" : Colors.coral + "40" }]}>
-                <Ionicons name={status.type === "success" ? "checkmark-circle" : "alert-circle"} size={18} color={status.type === "success" ? Colors.mint : Colors.coral} />
-                <Text style={[styles.promoStatusText, { color: status.type === "success" ? Colors.mint : Colors.coral, fontFamily: "DMSans_500Medium" }]}>{status.message}</Text>
-              </Animated.View>
-            )}
-
-            <Pressable
-              onPress={handleRedeem}
-              disabled={!code.trim() || loading}
-              style={({ pressed }) => [styles.promoBtn, { backgroundColor: code.trim() && !loading ? Colors.indigo : theme.border, opacity: pressed ? 0.8 : 1 }]}
-            >
-              <Text style={[styles.promoBtnText, { color: code.trim() && !loading ? "#fff" : theme.textTertiary, fontFamily: "DMSans_700Bold" }]}>
-                {loading ? "Checking..." : "Redeem"}
-              </Text>
-            </Pressable>
-          </View>
-        </Animated.View>
+        </View>
       </View>
     </Modal>
   );
 }
 
 // ─── Settings Modal ────────────────────────────────────────────────────────────
-function SettingsModal({ visible, onClose, theme }: { visible: boolean; onClose: () => void; theme: typeof Colors.light }) {
-  const { language } = useSettings();
-  const { isSubscribed, restorePurchases } = useSubscription();
-  const [showPaywall, setShowPaywall] = useState(false);
-  const [showLanguage, setShowLanguage] = useState(false);
-  const [showPromo, setShowPromo] = useState(false);
-  const [restoring, setRestoring] = useState(false);
+type SettingsPage = "main" | "language" | "promo";
+
+function SettingsModal({ visible, onClose, onPaywall, theme }: {
+  visible: boolean;
+  onClose: () => void;
+  onPaywall: () => void;
+  theme: typeof Colors.light;
+}) {
+  const { language, setLanguage } = useSettings();
+  const { isSubscribed, restorePurchases, redeemPromoCode } = useSubscription();
   const { recordings: allRecordings } = useRecordings();
+  const [page, setPage] = useState<SettingsPage>("main");
+  const [restoring, setRestoring] = useState(false);
+  const [promoCode, setPromoCode] = useState("");
+  const [promoStatus, setPromoStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
   const recordingCount = allRecordings.length;
+
+  const handleClose = () => {
+    setPage("main");
+    setPromoCode("");
+    setPromoStatus(null);
+    onClose();
+  };
 
   const handleRestore = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setRestoring(true);
-    const success = await restorePurchases();
+    await restorePurchases();
     setRestoring(false);
-    if (success) {
-      setShowPaywall(false);
-    }
+  };
+
+  const handleRedeem = async () => {
+    if (!promoCode.trim()) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setPromoLoading(true);
+    setPromoStatus(null);
+    const result = await redeemPromoCode(promoCode);
+    setPromoLoading(false);
+    setPromoStatus({ type: result.success ? "success" : "error", message: result.message });
+    if (result.success) setPromoCode("");
   };
 
   return (
-    <>
-      <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
-        <View style={styles.modalBackdrop}>
-          <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={onClose} />
-          <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
-            <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
-            <View style={styles.sheetHeader}>
-              <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>Settings</Text>
-              <Pressable onPress={onClose} style={styles.sheetClose}><Ionicons name="close" size={22} color={theme.textSecondary} /></Pressable>
-            </View>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose} statusBarTranslucent>
+      <View style={styles.modalBackdrop}>
+        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={handleClose} />
+        <View style={[styles.modalSheet, { backgroundColor: theme.card }]}>
+          <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
-              {/* Subscription Banner */}
-              <Pressable
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowPaywall(true); }}
-                style={({ pressed }) => [
-                  styles.subscriptionRow,
-                  { backgroundColor: isSubscribed ? Colors.indigo + "0F" : Colors.coral + "0F", borderColor: isSubscribed ? Colors.indigo + "30" : Colors.coral + "30", opacity: pressed ? 0.8 : 1 },
-                ]}
-              >
-                <View style={[styles.subIcon, { backgroundColor: isSubscribed ? Colors.indigo : Colors.coral }]}>
-                  <Ionicons name={isSubscribed ? "star" : "sparkles"} size={18} color="#fff" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.subTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
-                    {isSubscribed ? "Lecto Pro · Active" : "Upgrade to Pro"}
-                  </Text>
-                  <Text style={[styles.subDesc, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
-                    {isSubscribed
-                      ? "Unlimited lectures & all features unlocked"
-                      : `${recordingCount}/${FREE_RECORDING_LIMIT} free lectures used · Tap to unlock`}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={isSubscribed ? Colors.indigo : Colors.coral} />
-              </Pressable>
-
-              {/* PREFERENCES */}
-              <Text style={[styles.settingsGroupLabel, { color: theme.textTertiary, fontFamily: "DMSans_500Medium" }]}>PREFERENCES</Text>
-              <View style={[styles.settingsGroup, { backgroundColor: theme.card, borderColor: theme.border }]}>
+          {page === "main" && (
+            <>
+              <View style={styles.sheetHeader}>
+                <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>Settings</Text>
+                <Pressable onPress={handleClose} style={styles.sheetClose}><Ionicons name="close" size={22} color={theme.textSecondary} /></Pressable>
+              </View>
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
                 <Pressable
-                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowLanguage(true); }}
-                  style={({ pressed }) => [styles.settingsRow, { opacity: pressed ? 0.7 : 1 }]}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); handleClose(); onPaywall(); }}
+                  style={({ pressed }) => [styles.subscriptionRow, { backgroundColor: isSubscribed ? Colors.indigo + "0F" : Colors.coral + "0F", borderColor: isSubscribed ? Colors.indigo + "30" : Colors.coral + "30", opacity: pressed ? 0.8 : 1 }]}
                 >
-                  <View style={[styles.settingsRowIcon, { backgroundColor: Colors.indigo + "18" }]}>
-                    <Ionicons name="language-outline" size={18} color={Colors.indigo} />
+                  <View style={[styles.subIcon, { backgroundColor: isSubscribed ? Colors.indigo : Colors.coral }]}>
+                    <Ionicons name={isSubscribed ? "star" : "sparkles"} size={18} color="#fff" />
                   </View>
-                  <Text style={[styles.settingsRowLabel, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>AI Language</Text>
-                  <Text style={[styles.settingsRowValue, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>{language.name}</Text>
-                  <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.subTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>{isSubscribed ? "Lecto Pro · Active" : "Upgrade to Pro"}</Text>
+                    <Text style={[styles.subDesc, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
+                      {isSubscribed ? "Unlimited lectures & all features unlocked" : `${recordingCount}/${FREE_RECORDING_LIMIT} free lectures used · Tap to unlock`}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={isSubscribed ? Colors.indigo : Colors.coral} />
+                </Pressable>
+
+                <Text style={[styles.settingsGroupLabel, { color: theme.textTertiary, fontFamily: "DMSans_500Medium" }]}>PREFERENCES</Text>
+                <View style={[styles.settingsGroup, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                  <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setPage("language"); }} style={({ pressed }) => [styles.settingsRow, { opacity: pressed ? 0.7 : 1 }]}>
+                    <View style={[styles.settingsRowIcon, { backgroundColor: Colors.indigo + "18" }]}><Ionicons name="language-outline" size={18} color={Colors.indigo} /></View>
+                    <Text style={[styles.settingsRowLabel, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>AI Language</Text>
+                    <Text style={[styles.settingsRowValue, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>{language.name}</Text>
+                    <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
+                  </Pressable>
+                </View>
+
+                <Text style={[styles.settingsGroupLabel, { color: theme.textTertiary, fontFamily: "DMSans_500Medium" }]}>ACCOUNT</Text>
+                <View style={[styles.settingsGroup, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                  <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setPage("promo"); }} style={({ pressed }) => [styles.settingsRow, styles.settingsRowBorder, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }]}>
+                    <View style={[styles.settingsRowIcon, { backgroundColor: Colors.coral + "18" }]}><Ionicons name="gift-outline" size={18} color={Colors.coral} /></View>
+                    <Text style={[styles.settingsRowLabel, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>Promo Code</Text>
+                    <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
+                  </Pressable>
+                  <Pressable onPress={handleRestore} style={({ pressed }) => [styles.settingsRow, { opacity: pressed ? 0.7 : 1 }]}>
+                    <View style={[styles.settingsRowIcon, { backgroundColor: Colors.mint + "18" }]}><Ionicons name="refresh-outline" size={18} color={Colors.mint} /></View>
+                    <Text style={[styles.settingsRowLabel, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>{restoring ? "Restoring..." : "Restore Purchases"}</Text>
+                    <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
+                  </Pressable>
+                </View>
+
+                <Text style={[styles.settingsGroupLabel, { color: theme.textTertiary, fontFamily: "DMSans_500Medium" }]}>ABOUT</Text>
+                <View style={[styles.settingsGroup, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                  <View style={styles.settingsRow}>
+                    <View style={[styles.settingsRowIcon, { backgroundColor: Colors.indigo + "18" }]}><Ionicons name="information-circle-outline" size={18} color={Colors.indigo} /></View>
+                    <Text style={[styles.settingsRowLabel, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>Version</Text>
+                    <Text style={[styles.settingsRowValue, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>1.0.0</Text>
+                  </View>
+                </View>
+              </ScrollView>
+            </>
+          )}
+
+          {page === "language" && (
+            <>
+              <View style={styles.sheetHeader}>
+                <Pressable onPress={() => setPage("main")} style={styles.sheetClose}><Ionicons name="chevron-back" size={22} color={theme.textSecondary} /></Pressable>
+                <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>AI Language</Text>
+                <View style={styles.sheetClose} />
+              </View>
+              <Text style={[styles.settingsHint, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>Controls transcription, summaries, and chat</Text>
+              <ScrollView style={styles.langList} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+                {LANGUAGES.map((lang) => {
+                  const isSelected = language.code === lang.code;
+                  return (
+                    <Pressable
+                      key={lang.code}
+                      onPress={() => { Haptics.selectionAsync(); setLanguage(lang); setPage("main"); }}
+                      style={({ pressed }) => [styles.langRow, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }, isSelected && { backgroundColor: Colors.indigo + "0E" }]}
+                    >
+                      <View style={styles.langBadge}><Text style={[styles.langCode, { color: Colors.indigo, fontFamily: "DMSans_700Bold" }]}>{lang.code.toUpperCase()}</Text></View>
+                      <View style={styles.langInfo}>
+                        <Text style={[styles.langName, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>{lang.name}</Text>
+                        <Text style={[styles.langNative, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>{lang.nativeName}</Text>
+                      </View>
+                      {isSelected && <Ionicons name="checkmark-circle" size={22} color={Colors.indigo} />}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </>
+          )}
+
+          {page === "promo" && (
+            <>
+              <View style={styles.sheetHeader}>
+                <Pressable onPress={() => { setPage("main"); setPromoCode(""); setPromoStatus(null); }} style={styles.sheetClose}><Ionicons name="chevron-back" size={22} color={theme.textSecondary} /></Pressable>
+                <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>Promo Code</Text>
+                <View style={styles.sheetClose} />
+              </View>
+              <View style={styles.promoBody}>
+                <View style={[styles.promoIconWrap, { backgroundColor: Colors.coral + "18" }]}><Ionicons name="gift-outline" size={36} color={Colors.coral} /></View>
+                <Text style={[styles.promoTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>Have a promo code?</Text>
+                <Text style={[styles.promoDesc, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>Enter your code below to unlock Lecto Pro access.</Text>
+                <TextInput
+                  style={[styles.promoInput, { backgroundColor: theme.background, borderColor: theme.border, color: theme.text, fontFamily: "DMSans_500Medium" }]}
+                  placeholder="Enter code"
+                  placeholderTextColor={theme.textTertiary}
+                  value={promoCode}
+                  onChangeText={(t) => { setPromoCode(t); setPromoStatus(null); }}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  returnKeyType="done"
+                  onSubmitEditing={handleRedeem}
+                />
+                {promoStatus && (
+                  <Animated.View entering={FadeIn.duration(200)} style={[styles.promoStatus, { backgroundColor: promoStatus.type === "success" ? Colors.mint + "18" : Colors.coral + "18", borderColor: promoStatus.type === "success" ? Colors.mint + "40" : Colors.coral + "40" }]}>
+                    <Ionicons name={promoStatus.type === "success" ? "checkmark-circle" : "alert-circle"} size={18} color={promoStatus.type === "success" ? Colors.mint : Colors.coral} />
+                    <Text style={[styles.promoStatusText, { color: promoStatus.type === "success" ? Colors.mint : Colors.coral, fontFamily: "DMSans_500Medium" }]}>{promoStatus.message}</Text>
+                  </Animated.View>
+                )}
+                <Pressable
+                  onPress={handleRedeem}
+                  disabled={!promoCode.trim() || promoLoading}
+                  style={({ pressed }) => [styles.promoBtn, { backgroundColor: promoCode.trim() && !promoLoading ? Colors.indigo : theme.border, opacity: pressed ? 0.8 : 1 }]}
+                >
+                  <Text style={[styles.promoBtnText, { color: promoCode.trim() && !promoLoading ? "#fff" : theme.textTertiary, fontFamily: "DMSans_700Bold" }]}>{promoLoading ? "Checking..." : "Redeem"}</Text>
                 </Pressable>
               </View>
-
-              {/* ACCOUNT */}
-              <Text style={[styles.settingsGroupLabel, { color: theme.textTertiary, fontFamily: "DMSans_500Medium" }]}>ACCOUNT</Text>
-              <View style={[styles.settingsGroup, { backgroundColor: theme.card, borderColor: theme.border }]}>
-                <Pressable
-                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowPromo(true); }}
-                  style={({ pressed }) => [styles.settingsRow, styles.settingsRowBorder, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }]}
-                >
-                  <View style={[styles.settingsRowIcon, { backgroundColor: Colors.coral + "18" }]}>
-                    <Ionicons name="gift-outline" size={18} color={Colors.coral} />
-                  </View>
-                  <Text style={[styles.settingsRowLabel, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>Promo Code</Text>
-                  <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
-                </Pressable>
-                <Pressable
-                  onPress={handleRestore}
-                  style={({ pressed }) => [styles.settingsRow, { opacity: pressed ? 0.7 : 1 }]}
-                >
-                  <View style={[styles.settingsRowIcon, { backgroundColor: Colors.mint + "18" }]}>
-                    <Ionicons name="refresh-outline" size={18} color={Colors.mint} />
-                  </View>
-                  <Text style={[styles.settingsRowLabel, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>
-                    {restoring ? "Restoring..." : "Restore Purchases"}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
-                </Pressable>
-              </View>
-
-              {/* ABOUT */}
-              <Text style={[styles.settingsGroupLabel, { color: theme.textTertiary, fontFamily: "DMSans_500Medium" }]}>ABOUT</Text>
-              <View style={[styles.settingsGroup, { backgroundColor: theme.card, borderColor: theme.border }]}>
-                <View style={styles.settingsRow}>
-                  <View style={[styles.settingsRowIcon, { backgroundColor: Colors.indigo + "18" }]}>
-                    <Ionicons name="information-circle-outline" size={18} color={Colors.indigo} />
-                  </View>
-                  <Text style={[styles.settingsRowLabel, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>Version</Text>
-                  <Text style={[styles.settingsRowValue, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>1.0.0</Text>
-                </View>
-              </View>
-            </ScrollView>
-          </Animated.View>
+            </>
+          )}
         </View>
-      </Modal>
-
-      <LanguagePickerModal visible={showLanguage} onClose={() => setShowLanguage(false)} theme={theme} />
-      <PromoCodeModal visible={showPromo} onClose={() => setShowPromo(false)} theme={theme} />
-      <Paywall visible={showPaywall} onClose={() => setShowPaywall(false)} />
-    </>
+      </View>
+    </Modal>
   );
 }
 
@@ -759,6 +689,7 @@ export default function LibraryScreen() {
   const [renameTarget, setRenameTarget] = useState<{ id: string; type: "recording" | "folder"; currentName: string } | null>(null);
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   const currentFolderId = folderStack.length > 0 ? folderStack[folderStack.length - 1].id : null;
   const currentFolderName = folderStack.length > 0 ? folderStack[folderStack.length - 1].name : null;
@@ -1120,7 +1051,8 @@ export default function LibraryScreen() {
         onCancel={() => setDeleteTarget(null)}
         onConfirm={handleDeleteConfirm}
       />
-      <SettingsModal visible={showSettings} onClose={() => setShowSettings(false)} theme={theme} />
+      <SettingsModal visible={showSettings} onClose={() => setShowSettings(false)} onPaywall={() => setShowPaywall(true)} theme={theme} />
+      <Paywall visible={showPaywall} onClose={() => setShowPaywall(false)} />
     </View>
   );
 }
