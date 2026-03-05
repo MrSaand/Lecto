@@ -439,6 +439,7 @@ export default function RecordScreen() {
 
       let base64: string;
       let filename: string;
+      let nativeUri: string | null = null;
       const recordedAt = new Date().toISOString();
       const recordedDuration = elapsedRef.current;
 
@@ -452,6 +453,7 @@ export default function RecordScreen() {
         const result = await stopNativeRecording();
         base64 = result.base64;
         filename = result.filename;
+        nativeUri = result.uri;
         // Save to AsyncStorage BEFORE the network call so we can recover if interrupted
         await AsyncStorage.setItem(PENDING_KEY, JSON.stringify({
           uri: result.uri,
@@ -497,6 +499,9 @@ export default function RecordScreen() {
 
       await addRecording(newRecording);
       await AsyncStorage.removeItem(PENDING_KEY);
+      if (nativeUri) {
+        try { await FileSystem.deleteAsync(nativeUri, { idempotent: true }); } catch {}
+      }
       setRecordState("idle");
       setElapsed(0);
       elapsedRef.current = 0;
