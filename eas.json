@@ -8,13 +8,15 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_DOMAIN": "lectoai.replit.app"
+        "EXPO_PUBLIC_DOMAIN": "lectoai.replit.app",
+        "EXPO_PUBLIC_REVENUECAT_API_KEY": "appl_MgzdgWSVpKwgtQNgdqrRvNTmerh"
       }
     },
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_DOMAIN": "lectoai.replit.app"
+        "EXPO_PUBLIC_DOMAIN": "lectoai.replit.app",
+        "EXPO_PUBLIC_REVENUECAT_API_KEY": "appl_MgzdgWSVpKwgtQNgdqrRvNTmerh"
       }
     },
     "production": {

@@ -36,6 +36,13 @@ import { useAudioRecorder, RecordingPresets, setAudioModeAsync, AudioModule } fr
 import { router } from "expo-router";
 
 const PENDING_KEY = "@lecto_pending_lecture";
+const TRANSCRIBE_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
+
+function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(id));
+}
 
 type RecordState = "idle" | "recording" | "paused" | "processing";
 
@@ -294,11 +301,21 @@ export default function RecordScreen() {
 
       setStatusMsg("Transcribing with AI...");
       const baseUrl = getApiUrl();
-      const response = await fetch(`${baseUrl}api/transcribe`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ audio: base64, filename, language: pending.language }),
-      });
+      let response: Response;
+      try {
+        response = await fetchWithTimeout(
+          `${baseUrl}api/transcribe`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ audio: base64, filename, language: pending.language }),
+          },
+          TRANSCRIBE_TIMEOUT_MS
+        );
+      } catch (e: any) {
+        if (e?.name === "AbortError") throw new Error("Upload timed out. Please check your connection and try again.");
+        throw e;
+      }
 
       if (!response.ok) throw new Error("Transcription failed");
 
@@ -359,22 +376,26 @@ export default function RecordScreen() {
   };
 
   const pauseNativeRecording = async () => {
-  try {
-    recorder.pause(); // Uses the new expo-audio method
-    setRecordState("paused");
-    stopTimer();
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  } catch (e) {}
-};
+    try {
+      recorder.pause();
+      setRecordState("paused");
+      stopTimer();
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch (e: any) {
+      Alert.alert("Error", "Could not pause recording: " + (e?.message || String(e)));
+    }
+  };
 
-const resumeNativeRecording = async () => {
-  try {
-    recorder.record(); // Resumes using the new expo-audio method
-    setRecordState("recording");
-    startTimer();
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  } catch (e) {}
-};
+  const resumeNativeRecording = async () => {
+    try {
+      recorder.record();
+      setRecordState("recording");
+      startTimer();
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch (e: any) {
+      Alert.alert("Error", "Could not resume recording: " + (e?.message || String(e)));
+    }
+  };
 
 const stopNativeRecording = async (): Promise<{ base64: string; filename: string; uri: string }> => {
   if (!recorder) throw new Error("No recording in progress");
@@ -435,23 +456,33 @@ const stopNativeRecording = async (): Promise<{ base64: string; filename: string
 
       setStatusMsg("Transcribing with AI...");
       const baseUrl = getApiUrl();
-      const response = await fetch(`${baseUrl}api/transcribe`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ audio: base64, filename, language: language.code }),
-      });
+      let transcribeResponse: Response;
+      try {
+        transcribeResponse = await fetchWithTimeout(
+          `${baseUrl}api/transcribe`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ audio: base64, filename, language: language.code }),
+          },
+          TRANSCRIBE_TIMEOUT_MS
+        );
+      } catch (e: any) {
+        if (e?.name === "AbortError") throw new Error("Upload timed out. Please check your connection and try again.");
+        throw e;
+      }
 
-      if (!response.ok) {
+      if (!transcribeResponse.ok) {
         let errMsg = "Transcription failed";
         try {
-          const err = await response.json();
+          const err = await transcribeResponse.json();
           errMsg = err.error || errMsg;
         } catch {}
         throw new Error(errMsg);
       }
 
       setStatusMsg("Generating notes...");
-      const data = await response.json();
+      const data = await transcribeResponse.json();
 
       const newRecording = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -481,6 +512,8 @@ const stopNativeRecording = async (): Promise<{ base64: string; filename: string
     } catch (e: any) {
       console.error("Stop error:", e?.message || String(e));
       setRecordState("idle");
+      setElapsed(0);
+      elapsedRef.current = 0;
       setStatusMsg("");
       Alert.alert("Error", e?.message || "Could not process lecture. Please try again.");
     } finally {
