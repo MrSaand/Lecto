@@ -256,41 +256,40 @@ function CreateFolderModal({
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onCancel} statusBarTranslucent>
-      <Pressable style={styles.modalBackdrop} onPress={onCancel}>
+      <View style={styles.modalBackdrop}>
+        <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.45)" }]} onPress={onCancel} />
         <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
-          <View onStartShouldSetResponder={() => true}>
-            <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
-            <View style={styles.sheetHeader}>
-              <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>New Folder</Text>
-              <Pressable onPress={onCancel} style={styles.sheetClose}>
-                <Ionicons name="close" size={22} color={theme.textSecondary} />
-              </Pressable>
-            </View>
-            <View style={styles.inputSection}>
-              <TextInput
-                ref={inputRef}
-                style={[styles.nameInput, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border, fontFamily: "DMSans_400Regular" }]}
-                placeholder="Folder name"
-                placeholderTextColor={theme.textTertiary}
-                value={name}
-                onChangeText={setName}
-                autoFocus
-                returnKeyType="done"
-                onSubmitEditing={handleCreate}
-              />
-              <Pressable
-                onPress={handleCreate}
-                style={({ pressed }) => [styles.createBtn, { backgroundColor: name.trim() ? Colors.indigo : theme.border, opacity: pressed ? 0.8 : 1 }]}
-              >
-                <Ionicons name="folder-open" size={18} color={name.trim() ? "#fff" : theme.textTertiary} />
-                <Text style={[styles.createBtnText, { color: name.trim() ? "#fff" : theme.textTertiary, fontFamily: "DMSans_700Bold" }]}>
-                  Create Folder
-                </Text>
-              </Pressable>
-            </View>
+          <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
+          <View style={styles.sheetHeader}>
+            <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>New Folder</Text>
+            <Pressable onPress={onCancel} style={styles.sheetClose}>
+              <Ionicons name="close" size={22} color={theme.textSecondary} />
+            </Pressable>
+          </View>
+          <View style={styles.inputSection}>
+            <TextInput
+              ref={inputRef}
+              style={[styles.nameInput, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border, fontFamily: "DMSans_400Regular" }]}
+              placeholder="Folder name"
+              placeholderTextColor={theme.textTertiary}
+              value={name}
+              onChangeText={setName}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={handleCreate}
+            />
+            <Pressable
+              onPress={handleCreate}
+              style={({ pressed }) => [styles.createBtn, { backgroundColor: name.trim() ? Colors.indigo : theme.border, opacity: pressed ? 0.8 : 1 }]}
+            >
+              <Ionicons name="folder-open" size={18} color={name.trim() ? "#fff" : theme.textTertiary} />
+              <Text style={[styles.createBtnText, { color: name.trim() ? "#fff" : theme.textTertiary, fontFamily: "DMSans_700Bold" }]}>
+                Create Folder
+              </Text>
+            </Pressable>
           </View>
         </Animated.View>
-      </Pressable>
+      </View>
     </Modal>
   );
 }
@@ -321,43 +320,42 @@ function RenameModal({
 
   return (
     <Modal visible={!!target} transparent animationType="none" onRequestClose={onCancel} statusBarTranslucent>
-      <Pressable style={styles.modalBackdrop} onPress={onCancel}>
+      <View style={styles.modalBackdrop}>
+        <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.45)" }]} onPress={onCancel} />
         <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
-          <View onStartShouldSetResponder={() => true}>
-            <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
-            <View style={styles.sheetHeader}>
-              <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
-                Rename {target?.type === "folder" ? "Folder" : "Lecture"}
+          <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
+          <View style={styles.sheetHeader}>
+            <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
+              Rename {target?.type === "folder" ? "Folder" : "Lecture"}
+            </Text>
+            <Pressable onPress={onCancel} style={styles.sheetClose}>
+              <Ionicons name="close" size={22} color={theme.textSecondary} />
+            </Pressable>
+          </View>
+          <View style={styles.inputSection}>
+            <TextInput
+              style={[styles.nameInput, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border, fontFamily: "DMSans_400Regular" }]}
+              placeholder="New name"
+              placeholderTextColor={theme.textTertiary}
+              value={name}
+              onChangeText={setName}
+              autoFocus
+              selectTextOnFocus
+              returnKeyType="done"
+              onSubmitEditing={handleSave}
+            />
+            <Pressable
+              onPress={handleSave}
+              style={({ pressed }) => [styles.createBtn, { backgroundColor: name.trim() ? Colors.indigo : theme.border, opacity: pressed ? 0.8 : 1 }]}
+            >
+              <Feather name="check" size={18} color={name.trim() ? "#fff" : theme.textTertiary} />
+              <Text style={[styles.createBtnText, { color: name.trim() ? "#fff" : theme.textTertiary, fontFamily: "DMSans_700Bold" }]}>
+                Save
               </Text>
-              <Pressable onPress={onCancel} style={styles.sheetClose}>
-                <Ionicons name="close" size={22} color={theme.textSecondary} />
-              </Pressable>
-            </View>
-            <View style={styles.inputSection}>
-              <TextInput
-                style={[styles.nameInput, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border, fontFamily: "DMSans_400Regular" }]}
-                placeholder="New name"
-                placeholderTextColor={theme.textTertiary}
-                value={name}
-                onChangeText={setName}
-                autoFocus
-                selectTextOnFocus
-                returnKeyType="done"
-                onSubmitEditing={handleSave}
-              />
-              <Pressable
-                onPress={handleSave}
-                style={({ pressed }) => [styles.createBtn, { backgroundColor: name.trim() ? Colors.indigo : theme.border, opacity: pressed ? 0.8 : 1 }]}
-              >
-                <Feather name="check" size={18} color={name.trim() ? "#fff" : theme.textTertiary} />
-                <Text style={[styles.createBtnText, { color: name.trim() ? "#fff" : theme.textTertiary, fontFamily: "DMSans_700Bold" }]}>
-                  Save
-                </Text>
-              </Pressable>
-            </View>
+            </Pressable>
           </View>
         </Animated.View>
-      </Pressable>
+      </View>
     </Modal>
   );
 }
@@ -384,56 +382,55 @@ function OptionsSheet({
 
   return (
     <Modal visible={!!target} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={styles.modalBackdrop} onPress={onClose}>
+      <View style={styles.modalBackdrop}>
+        <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.45)" }]} onPress={onClose} />
         <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
-          <View onStartShouldSetResponder={() => true}>
-            <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
-            <View style={styles.sheetHeader}>
-              <View style={styles.optionsTargetInfo}>
-                <View style={[styles.optionsIcon, { backgroundColor: isFolder ? Colors.indigo + "16" : Colors.coral + "16" }]}>
-                  <Ionicons name={isFolder ? "folder" : "radio"} size={18} color={isFolder ? Colors.indigo : Colors.coral} />
-                </View>
-                <Text style={[styles.optionsTargetName, { color: theme.text, fontFamily: "DMSans_700Bold" }]} numberOfLines={2}>
-                  {target?.name}
-                </Text>
+          <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
+          <View style={styles.sheetHeader}>
+            <View style={styles.optionsTargetInfo}>
+              <View style={[styles.optionsIcon, { backgroundColor: isFolder ? Colors.indigo + "16" : Colors.coral + "16" }]}>
+                <Ionicons name={isFolder ? "folder" : "radio"} size={18} color={isFolder ? Colors.indigo : Colors.coral} />
               </View>
+              <Text style={[styles.optionsTargetName, { color: theme.text, fontFamily: "DMSans_700Bold" }]} numberOfLines={2}>
+                {target?.name}
+              </Text>
             </View>
-            <View style={[styles.optionsList, { borderTopColor: theme.border }]}>
-              <Pressable onPress={onRename} style={({ pressed }) => [styles.optionRow, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }]}>
-                <View style={[styles.optionRowIcon, { backgroundColor: Colors.indigo + "14" }]}>
-                  <Feather name="edit-2" size={16} color={Colors.indigo} />
-                </View>
-                <Text style={[styles.optionRowText, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>Rename</Text>
-                <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
-              </Pressable>
-              <Pressable onPress={onMove} style={({ pressed }) => [styles.optionRow, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }]}>
-                <View style={[styles.optionRowIcon, { backgroundColor: Colors.mint + "14" }]}>
-                  <Ionicons name="folder-open-outline" size={16} color={Colors.mint} />
-                </View>
-                <Text style={[styles.optionRowText, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>Move to Folder</Text>
-                <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
-              </Pressable>
-              <Pressable onPress={onShare} style={({ pressed }) => [styles.optionRow, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }]}>
-                <View style={[styles.optionRowIcon, { backgroundColor: Colors.indigoLight + "18" }]}>
-                  <Ionicons name="share-outline" size={16} color={Colors.indigoLight} />
-                </View>
-                <Text style={[styles.optionRowText, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>
-                  {isFolder ? "Share Folder" : "Share"}
-                </Text>
-                <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
-              </Pressable>
-              <Pressable onPress={onDelete} style={({ pressed }) => [styles.optionRow, { borderBottomColor: "transparent", opacity: pressed ? 0.7 : 1 }]}>
-                <View style={[styles.optionRowIcon, { backgroundColor: Colors.coral + "14" }]}>
-                  <Feather name="trash-2" size={16} color={Colors.coral} />
-                </View>
-                <Text style={[styles.optionRowText, { color: Colors.coral, fontFamily: "DMSans_500Medium" }]}>Delete</Text>
-                <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
-              </Pressable>
-            </View>
-            <View style={{ height: 24 }} />
           </View>
+          <View style={[styles.optionsList, { borderTopColor: theme.border }]}>
+            <Pressable onPress={onRename} style={({ pressed }) => [styles.optionRow, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }]}>
+              <View style={[styles.optionRowIcon, { backgroundColor: Colors.indigo + "14" }]}>
+                <Feather name="edit-2" size={16} color={Colors.indigo} />
+              </View>
+              <Text style={[styles.optionRowText, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>Rename</Text>
+              <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
+            </Pressable>
+            <Pressable onPress={onMove} style={({ pressed }) => [styles.optionRow, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }]}>
+              <View style={[styles.optionRowIcon, { backgroundColor: Colors.mint + "14" }]}>
+                <Ionicons name="folder-open-outline" size={16} color={Colors.mint} />
+              </View>
+              <Text style={[styles.optionRowText, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>Move to Folder</Text>
+              <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
+            </Pressable>
+            <Pressable onPress={onShare} style={({ pressed }) => [styles.optionRow, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }]}>
+              <View style={[styles.optionRowIcon, { backgroundColor: Colors.indigoLight + "18" }]}>
+                <Ionicons name="share-outline" size={16} color={Colors.indigoLight} />
+              </View>
+              <Text style={[styles.optionRowText, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>
+                {isFolder ? "Share Folder" : "Share"}
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
+            </Pressable>
+            <Pressable onPress={onDelete} style={({ pressed }) => [styles.optionRow, { borderBottomColor: "transparent", opacity: pressed ? 0.7 : 1 }]}>
+              <View style={[styles.optionRowIcon, { backgroundColor: Colors.coral + "14" }]}>
+                <Feather name="trash-2" size={16} color={Colors.coral} />
+              </View>
+              <Text style={[styles.optionRowText, { color: Colors.coral, fontFamily: "DMSans_500Medium" }]}>Delete</Text>
+              <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
+            </Pressable>
+          </View>
+          <View style={{ height: 24 }} />
         </Animated.View>
-      </Pressable>
+      </View>
     </Modal>
   );
 }
@@ -454,38 +451,37 @@ function DeleteConfirmModal({
 }) {
   return (
     <Modal visible={!!target} transparent animationType="none" onRequestClose={onCancel} statusBarTranslucent>
-      <Pressable style={styles.modalBackdrop} onPress={onCancel}>
+      <View style={styles.modalBackdrop}>
+        <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.45)" }]} onPress={onCancel} />
         <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
-          <View onStartShouldSetResponder={() => true}>
-            <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
-            <View style={styles.deleteSheetBody}>
-              <View style={[styles.deleteIconWrap, { backgroundColor: Colors.coral + "14" }]}>
-                <Feather name="trash-2" size={28} color={Colors.coral} />
-              </View>
-              <Text style={[styles.deleteTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
-                Delete {isFolder ? "Folder" : "Lecture"}?
-              </Text>
-              <Text style={[styles.deleteSubtitle, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
-                {target?.name}
-              </Text>
-              <Text style={[styles.deleteWarning, { color: theme.textTertiary, fontFamily: "DMSans_400Regular" }]}>
-                {isFolder
-                  ? "The folder will be deleted. Any lectures inside will be moved to the parent folder."
-                  : "This lecture and its notes will be permanently deleted. This cannot be undone."}
-              </Text>
+          <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
+          <View style={styles.deleteSheetBody}>
+            <View style={[styles.deleteIconWrap, { backgroundColor: Colors.coral + "14" }]}>
+              <Feather name="trash-2" size={28} color={Colors.coral} />
             </View>
-            <View style={styles.deleteActions}>
-              <Pressable onPress={onCancel} style={({ pressed }) => [styles.cancelBtn, { backgroundColor: theme.border, opacity: pressed ? 0.7 : 1 }]}>
-                <Text style={[styles.cancelBtnText, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>Cancel</Text>
-              </Pressable>
-              <Pressable onPress={onConfirm} style={({ pressed }) => [styles.confirmDeleteBtn, { backgroundColor: Colors.coral, opacity: pressed ? 0.8 : 1 }]}>
-                <Feather name="trash-2" size={16} color="#fff" />
-                <Text style={[styles.confirmDeleteBtnText, { fontFamily: "DMSans_700Bold" }]}>Delete</Text>
-              </Pressable>
-            </View>
+            <Text style={[styles.deleteTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
+              Delete {isFolder ? "Folder" : "Lecture"}?
+            </Text>
+            <Text style={[styles.deleteSubtitle, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
+              {target?.name}
+            </Text>
+            <Text style={[styles.deleteWarning, { color: theme.textTertiary, fontFamily: "DMSans_400Regular" }]}>
+              {isFolder
+                ? "The folder will be deleted. Any lectures inside will be moved to the parent folder."
+                : "This lecture and its notes will be permanently deleted. This cannot be undone."}
+            </Text>
+          </View>
+          <View style={styles.deleteActions}>
+            <Pressable onPress={onCancel} style={({ pressed }) => [styles.cancelBtn, { backgroundColor: theme.border, opacity: pressed ? 0.7 : 1 }]}>
+              <Text style={[styles.cancelBtnText, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>Cancel</Text>
+            </Pressable>
+            <Pressable onPress={onConfirm} style={({ pressed }) => [styles.confirmDeleteBtn, { backgroundColor: Colors.coral, opacity: pressed ? 0.8 : 1 }]}>
+              <Feather name="trash-2" size={16} color="#fff" />
+              <Text style={[styles.confirmDeleteBtnText, { fontFamily: "DMSans_700Bold" }]}>Delete</Text>
+            </Pressable>
           </View>
         </Animated.View>
-      </Pressable>
+      </View>
     </Modal>
   );
 }
@@ -495,44 +491,43 @@ function LanguagePickerModal({ visible, onClose, theme }: { visible: boolean; on
   const { language, setLanguage } = useSettings();
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={styles.modalBackdrop} onPress={onClose}>
+      <View style={styles.modalBackdrop}>
+        <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.45)" }]} onPress={onClose} />
         <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
-          <View onStartShouldSetResponder={() => true}>
-            <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
-            <View style={styles.sheetHeader}>
-              <Pressable onPress={onClose} style={styles.sheetClose}>
-                <Ionicons name="chevron-down" size={22} color={theme.textSecondary} />
-              </Pressable>
-              <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>AI Language</Text>
-              <View style={styles.sheetClose} />
-            </View>
-            <Text style={[styles.settingsHint, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
-              Controls transcription, summaries, and chat
-            </Text>
-            <ScrollView style={styles.langList} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-              {LANGUAGES.map((lang) => {
-                const isSelected = language.code === lang.code;
-                return (
-                  <Pressable
-                    key={lang.code}
-                    onPress={() => { Haptics.selectionAsync(); setLanguage(lang); onClose(); }}
-                    style={({ pressed }) => [styles.langRow, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }, isSelected && { backgroundColor: Colors.indigo + "0E" }]}
-                  >
-                    <View style={styles.langBadge}>
-                      <Text style={[styles.langCode, { color: Colors.indigo, fontFamily: "DMSans_700Bold" }]}>{lang.code.toUpperCase()}</Text>
-                    </View>
-                    <View style={styles.langInfo}>
-                      <Text style={[styles.langName, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>{lang.name}</Text>
-                      <Text style={[styles.langNative, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>{lang.nativeName}</Text>
-                    </View>
-                    {isSelected && <Ionicons name="checkmark-circle" size={22} color={Colors.indigo} />}
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+          <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
+          <View style={styles.sheetHeader}>
+            <Pressable onPress={onClose} style={styles.sheetClose}>
+              <Ionicons name="chevron-down" size={22} color={theme.textSecondary} />
+            </Pressable>
+            <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>AI Language</Text>
+            <View style={styles.sheetClose} />
           </View>
+          <Text style={[styles.settingsHint, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
+            Controls transcription, summaries, and chat
+          </Text>
+          <ScrollView style={styles.langList} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+            {LANGUAGES.map((lang) => {
+              const isSelected = language.code === lang.code;
+              return (
+                <Pressable
+                  key={lang.code}
+                  onPress={() => { Haptics.selectionAsync(); setLanguage(lang); onClose(); }}
+                  style={({ pressed }) => [styles.langRow, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }, isSelected && { backgroundColor: Colors.indigo + "0E" }]}
+                >
+                  <View style={styles.langBadge}>
+                    <Text style={[styles.langCode, { color: Colors.indigo, fontFamily: "DMSans_700Bold" }]}>{lang.code.toUpperCase()}</Text>
+                  </View>
+                  <View style={styles.langInfo}>
+                    <Text style={[styles.langName, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>{lang.name}</Text>
+                    <Text style={[styles.langNative, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>{lang.nativeName}</Text>
+                  </View>
+                  {isSelected && <Ionicons name="checkmark-circle" size={22} color={Colors.indigo} />}
+                </Pressable>
+              );
+            })}
+          </ScrollView>
         </Animated.View>
-      </Pressable>
+      </View>
     </Modal>
   );
 }
@@ -563,61 +558,60 @@ function PromoCodeModal({ visible, onClose, theme }: { visible: boolean; onClose
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose} statusBarTranslucent>
-      <Pressable style={styles.modalBackdrop} onPress={handleClose}>
+      <View style={styles.modalBackdrop}>
+        <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.45)" }]} onPress={handleClose} />
         <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
-          <View onStartShouldSetResponder={() => true}>
-            <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
-            <View style={styles.sheetHeader}>
-              <Pressable onPress={handleClose} style={styles.sheetClose}>
-                <Ionicons name="chevron-down" size={22} color={theme.textSecondary} />
-              </Pressable>
-              <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>Promo Code</Text>
-              <View style={styles.sheetClose} />
+          <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
+          <View style={styles.sheetHeader}>
+            <Pressable onPress={handleClose} style={styles.sheetClose}>
+              <Ionicons name="chevron-down" size={22} color={theme.textSecondary} />
+            </Pressable>
+            <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>Promo Code</Text>
+            <View style={styles.sheetClose} />
+          </View>
+
+          <View style={styles.promoBody}>
+            <View style={[styles.promoIconWrap, { backgroundColor: Colors.coral + "18" }]}>
+              <Ionicons name="gift-outline" size={36} color={Colors.coral} />
             </View>
+            <Text style={[styles.promoTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
+              Have a promo code?
+            </Text>
+            <Text style={[styles.promoDesc, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
+              Enter your code below to unlock Lecto Pro access.
+            </Text>
 
-            <View style={styles.promoBody}>
-              <View style={[styles.promoIconWrap, { backgroundColor: Colors.coral + "18" }]}>
-                <Ionicons name="gift-outline" size={36} color={Colors.coral} />
-              </View>
-              <Text style={[styles.promoTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
-                Have a promo code?
+            <TextInput
+              style={[styles.promoInput, { backgroundColor: theme.background, borderColor: theme.border, color: theme.text, fontFamily: "DMSans_500Medium" }]}
+              placeholder="Enter code"
+              placeholderTextColor={theme.textTertiary}
+              value={code}
+              onChangeText={(t) => { setCode(t); setStatus(null); }}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              returnKeyType="done"
+              onSubmitEditing={handleRedeem}
+            />
+
+            {status && (
+              <Animated.View entering={FadeIn.duration(200)} style={[styles.promoStatus, { backgroundColor: status.type === "success" ? Colors.mint + "18" : Colors.coral + "18", borderColor: status.type === "success" ? Colors.mint + "40" : Colors.coral + "40" }]}>
+                <Ionicons name={status.type === "success" ? "checkmark-circle" : "alert-circle"} size={18} color={status.type === "success" ? Colors.mint : Colors.coral} />
+                <Text style={[styles.promoStatusText, { color: status.type === "success" ? Colors.mint : Colors.coral, fontFamily: "DMSans_500Medium" }]}>{status.message}</Text>
+              </Animated.View>
+            )}
+
+            <Pressable
+              onPress={handleRedeem}
+              disabled={!code.trim() || loading}
+              style={({ pressed }) => [styles.promoBtn, { backgroundColor: code.trim() && !loading ? Colors.indigo : theme.border, opacity: pressed ? 0.8 : 1 }]}
+            >
+              <Text style={[styles.promoBtnText, { color: code.trim() && !loading ? "#fff" : theme.textTertiary, fontFamily: "DMSans_700Bold" }]}>
+                {loading ? "Checking..." : "Redeem"}
               </Text>
-              <Text style={[styles.promoDesc, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
-                Enter your code below to unlock Lecto Pro access.
-              </Text>
-
-              <TextInput
-                style={[styles.promoInput, { backgroundColor: theme.background, borderColor: theme.border, color: theme.text, fontFamily: "DMSans_500Medium" }]}
-                placeholder="Enter code"
-                placeholderTextColor={theme.textTertiary}
-                value={code}
-                onChangeText={(t) => { setCode(t); setStatus(null); }}
-                autoCapitalize="characters"
-                autoCorrect={false}
-                returnKeyType="done"
-                onSubmitEditing={handleRedeem}
-              />
-
-              {status && (
-                <Animated.View entering={FadeIn.duration(200)} style={[styles.promoStatus, { backgroundColor: status.type === "success" ? Colors.mint + "18" : Colors.coral + "18", borderColor: status.type === "success" ? Colors.mint + "40" : Colors.coral + "40" }]}>
-                  <Ionicons name={status.type === "success" ? "checkmark-circle" : "alert-circle"} size={18} color={status.type === "success" ? Colors.mint : Colors.coral} />
-                  <Text style={[styles.promoStatusText, { color: status.type === "success" ? Colors.mint : Colors.coral, fontFamily: "DMSans_500Medium" }]}>{status.message}</Text>
-                </Animated.View>
-              )}
-
-              <Pressable
-                onPress={handleRedeem}
-                disabled={!code.trim() || loading}
-                style={({ pressed }) => [styles.promoBtn, { backgroundColor: code.trim() && !loading ? Colors.indigo : theme.border, opacity: pressed ? 0.8 : 1 }]}
-              >
-                <Text style={[styles.promoBtnText, { color: code.trim() && !loading ? "#fff" : theme.textTertiary, fontFamily: "DMSans_700Bold" }]}>
-                  {loading ? "Checking..." : "Redeem"}
-                </Text>
-              </Pressable>
-            </View>
+            </Pressable>
           </View>
         </Animated.View>
-      </Pressable>
+      </View>
     </Modal>
   );
 }
@@ -646,98 +640,97 @@ function SettingsModal({ visible, onClose, theme }: { visible: boolean; onClose:
   return (
     <>
       <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
-        <Pressable style={styles.modalBackdrop} onPress={onClose}>
+        <View style={styles.modalBackdrop}>
+          <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.45)" }]} onPress={onClose} />
           <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
-            <View onStartShouldSetResponder={() => true}>
-              <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
-              <View style={styles.sheetHeader}>
-                <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>Settings</Text>
-                <Pressable onPress={onClose} style={styles.sheetClose}><Ionicons name="close" size={22} color={theme.textSecondary} /></Pressable>
+            <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
+            <View style={styles.sheetHeader}>
+              <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>Settings</Text>
+              <Pressable onPress={onClose} style={styles.sheetClose}><Ionicons name="close" size={22} color={theme.textSecondary} /></Pressable>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
+              {/* Subscription Banner */}
+              <Pressable
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowPaywall(true); }}
+                style={({ pressed }) => [
+                  styles.subscriptionRow,
+                  { backgroundColor: isSubscribed ? Colors.indigo + "0F" : Colors.coral + "0F", borderColor: isSubscribed ? Colors.indigo + "30" : Colors.coral + "30", opacity: pressed ? 0.8 : 1 },
+                ]}
+              >
+                <View style={[styles.subIcon, { backgroundColor: isSubscribed ? Colors.indigo : Colors.coral }]}>
+                  <Ionicons name={isSubscribed ? "star" : "sparkles"} size={18} color="#fff" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.subTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
+                    {isSubscribed ? "Lecto Pro · Active" : "Upgrade to Pro"}
+                  </Text>
+                  <Text style={[styles.subDesc, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
+                    {isSubscribed
+                      ? "Unlimited lectures & all features unlocked"
+                      : `${recordingCount}/${FREE_RECORDING_LIMIT} free lectures used · Tap to unlock`}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={isSubscribed ? Colors.indigo : Colors.coral} />
+              </Pressable>
+
+              {/* PREFERENCES */}
+              <Text style={[styles.settingsGroupLabel, { color: theme.textTertiary, fontFamily: "DMSans_500Medium" }]}>PREFERENCES</Text>
+              <View style={[styles.settingsGroup, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                <Pressable
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowLanguage(true); }}
+                  style={({ pressed }) => [styles.settingsRow, { opacity: pressed ? 0.7 : 1 }]}
+                >
+                  <View style={[styles.settingsRowIcon, { backgroundColor: Colors.indigo + "18" }]}>
+                    <Ionicons name="language-outline" size={18} color={Colors.indigo} />
+                  </View>
+                  <Text style={[styles.settingsRowLabel, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>AI Language</Text>
+                  <Text style={[styles.settingsRowValue, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>{language.name}</Text>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
+                </Pressable>
               </View>
 
-              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
-                {/* Subscription Banner */}
+              {/* ACCOUNT */}
+              <Text style={[styles.settingsGroupLabel, { color: theme.textTertiary, fontFamily: "DMSans_500Medium" }]}>ACCOUNT</Text>
+              <View style={[styles.settingsGroup, { backgroundColor: theme.card, borderColor: theme.border }]}>
                 <Pressable
-                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowPaywall(true); }}
-                  style={({ pressed }) => [
-                    styles.subscriptionRow,
-                    { backgroundColor: isSubscribed ? Colors.indigo + "0F" : Colors.coral + "0F", borderColor: isSubscribed ? Colors.indigo + "30" : Colors.coral + "30", opacity: pressed ? 0.8 : 1 },
-                  ]}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowPromo(true); }}
+                  style={({ pressed }) => [styles.settingsRow, styles.settingsRowBorder, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }]}
                 >
-                  <View style={[styles.subIcon, { backgroundColor: isSubscribed ? Colors.indigo : Colors.coral }]}>
-                    <Ionicons name={isSubscribed ? "star" : "sparkles"} size={18} color="#fff" />
+                  <View style={[styles.settingsRowIcon, { backgroundColor: Colors.coral + "18" }]}>
+                    <Ionicons name="gift-outline" size={18} color={Colors.coral} />
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.subTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
-                      {isSubscribed ? "Lecto Pro · Active" : "Upgrade to Pro"}
-                    </Text>
-                    <Text style={[styles.subDesc, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
-                      {isSubscribed
-                        ? "Unlimited lectures & all features unlocked"
-                        : `${recordingCount}/${FREE_RECORDING_LIMIT} free lectures used · Tap to unlock`}
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color={isSubscribed ? Colors.indigo : Colors.coral} />
+                  <Text style={[styles.settingsRowLabel, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>Promo Code</Text>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
                 </Pressable>
-
-                {/* PREFERENCES */}
-                <Text style={[styles.settingsGroupLabel, { color: theme.textTertiary, fontFamily: "DMSans_500Medium" }]}>PREFERENCES</Text>
-                <View style={[styles.settingsGroup, { backgroundColor: theme.card, borderColor: theme.border }]}>
-                  <Pressable
-                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowLanguage(true); }}
-                    style={({ pressed }) => [styles.settingsRow, { opacity: pressed ? 0.7 : 1 }]}
-                  >
-                    <View style={[styles.settingsRowIcon, { backgroundColor: Colors.indigo + "18" }]}>
-                      <Ionicons name="language-outline" size={18} color={Colors.indigo} />
-                    </View>
-                    <Text style={[styles.settingsRowLabel, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>AI Language</Text>
-                    <Text style={[styles.settingsRowValue, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>{language.name}</Text>
-                    <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
-                  </Pressable>
-                </View>
-
-                {/* ACCOUNT */}
-                <Text style={[styles.settingsGroupLabel, { color: theme.textTertiary, fontFamily: "DMSans_500Medium" }]}>ACCOUNT</Text>
-                <View style={[styles.settingsGroup, { backgroundColor: theme.card, borderColor: theme.border }]}>
-                  <Pressable
-                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowPromo(true); }}
-                    style={({ pressed }) => [styles.settingsRow, styles.settingsRowBorder, { borderBottomColor: theme.border, opacity: pressed ? 0.7 : 1 }]}
-                  >
-                    <View style={[styles.settingsRowIcon, { backgroundColor: Colors.coral + "18" }]}>
-                      <Ionicons name="gift-outline" size={18} color={Colors.coral} />
-                    </View>
-                    <Text style={[styles.settingsRowLabel, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>Promo Code</Text>
-                    <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
-                  </Pressable>
-                  <Pressable
-                    onPress={handleRestore}
-                    style={({ pressed }) => [styles.settingsRow, { opacity: pressed ? 0.7 : 1 }]}
-                  >
-                    <View style={[styles.settingsRowIcon, { backgroundColor: Colors.mint + "18" }]}>
-                      <Ionicons name="refresh-outline" size={18} color={Colors.mint} />
-                    </View>
-                    <Text style={[styles.settingsRowLabel, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>
-                      {restoring ? "Restoring..." : "Restore Purchases"}
-                    </Text>
-                    <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
-                  </Pressable>
-                </View>
-
-                {/* ABOUT */}
-                <Text style={[styles.settingsGroupLabel, { color: theme.textTertiary, fontFamily: "DMSans_500Medium" }]}>ABOUT</Text>
-                <View style={[styles.settingsGroup, { backgroundColor: theme.card, borderColor: theme.border }]}>
-                  <View style={styles.settingsRow}>
-                    <View style={[styles.settingsRowIcon, { backgroundColor: Colors.indigo + "18" }]}>
-                      <Ionicons name="information-circle-outline" size={18} color={Colors.indigo} />
-                    </View>
-                    <Text style={[styles.settingsRowLabel, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>Version</Text>
-                    <Text style={[styles.settingsRowValue, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>1.0.0</Text>
+                <Pressable
+                  onPress={handleRestore}
+                  style={({ pressed }) => [styles.settingsRow, { opacity: pressed ? 0.7 : 1 }]}
+                >
+                  <View style={[styles.settingsRowIcon, { backgroundColor: Colors.mint + "18" }]}>
+                    <Ionicons name="refresh-outline" size={18} color={Colors.mint} />
                   </View>
+                  <Text style={[styles.settingsRowLabel, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>
+                    {restoring ? "Restoring..." : "Restore Purchases"}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
+                </Pressable>
+              </View>
+
+              {/* ABOUT */}
+              <Text style={[styles.settingsGroupLabel, { color: theme.textTertiary, fontFamily: "DMSans_500Medium" }]}>ABOUT</Text>
+              <View style={[styles.settingsGroup, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                <View style={styles.settingsRow}>
+                  <View style={[styles.settingsRowIcon, { backgroundColor: Colors.indigo + "18" }]}>
+                    <Ionicons name="information-circle-outline" size={18} color={Colors.indigo} />
+                  </View>
+                  <Text style={[styles.settingsRowLabel, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>Version</Text>
+                  <Text style={[styles.settingsRowValue, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>1.0.0</Text>
                 </View>
-              </ScrollView>
-            </View>
+              </View>
+            </ScrollView>
           </Animated.View>
-        </Pressable>
+        </View>
       </Modal>
 
       <LanguagePickerModal visible={showLanguage} onClose={() => setShowLanguage(false)} theme={theme} />
@@ -1199,8 +1192,8 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 14, textAlign: "center", lineHeight: 20 },
 
   // Shared modal
-  modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },
-  modalSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "85%", shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.12, shadowRadius: 20, elevation: 20 },
+  modalBackdrop: { flex: 1 },
+  modalSheet: { position: "absolute", bottom: 0, left: 0, right: 0, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "85%", shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.12, shadowRadius: 20, elevation: 20 },
   sheetHandle: { alignItems: "center", paddingTop: 12, paddingBottom: 4 },
   handleBar: { width: 36, height: 4, borderRadius: 2 },
   sheetHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 16 },

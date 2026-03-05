@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { useSubscription } from "@/contexts/SubscriptionContext";
-import Animated, { FadeIn, FadeInDown, SlideInDown } from "react-native-reanimated";
+import Animated, { FadeIn } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 
 const FEATURES = [
@@ -124,7 +124,7 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <View style={styles.backdrop}>
-        <Animated.View entering={SlideInDown.springify().damping(22)} style={[styles.sheet, { backgroundColor: theme.background }]}>
+        <Animated.View entering={FadeIn.duration(280)} style={[styles.sheet, { backgroundColor: theme.background }]}>
           <Pressable onPress={onClose} style={[styles.closeBtn, { backgroundColor: theme.card }]}>
             <Ionicons name="close" size={20} color={theme.textSecondary} />
           </Pressable>
@@ -146,7 +146,7 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
               </Text>
             </Animated.View>
 
-            <Animated.View entering={FadeInDown.delay(150).duration(400)} style={styles.featuresSection}>
+            <Animated.View entering={FadeIn.delay(150).duration(400)} style={styles.featuresSection}>
               {FEATURES.map((f, i) => (
                 <View key={i} style={styles.featureRow}>
                   <View style={[styles.featureIcon, { backgroundColor: Colors.indigo + "16" }]}>
@@ -157,7 +157,7 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
               ))}
             </Animated.View>
 
-            <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.plansSection}>
+            <Animated.View entering={FadeIn.delay(200).duration(400)} style={styles.plansSection}>
               <Pressable
                 onPress={() => { Haptics.selectionAsync(); setSelectedPlan("yearly"); }}
                 style={[
@@ -212,7 +212,7 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
               </Text>
             ) : null}
 
-            <Animated.View entering={FadeInDown.delay(250).duration(400)} style={styles.ctaSection}>
+            <Animated.View entering={FadeIn.delay(250).duration(400)} style={styles.ctaSection}>
               {isWeb ? (
                 <View style={[styles.webNotice, { backgroundColor: theme.card, borderColor: theme.border }]}>
                   <Ionicons name="phone-portrait-outline" size={22} color={Colors.indigo} />
