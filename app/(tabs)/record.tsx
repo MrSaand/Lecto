@@ -17,7 +17,7 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { useSubscription, FREE_RECORDING_LIMIT } from "@/contexts/SubscriptionContext";
 import Paywall from "@/components/Paywall";
 import { getApiUrl } from "@/lib/query-client";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import Animated, {

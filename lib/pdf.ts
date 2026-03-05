@@ -1,5 +1,5 @@
 import * as Print from "expo-print";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import { Platform, Share } from "react-native";
 import { Recording } from "@/contexts/RecordingsContext";
 import { getApiUrl } from "@/lib/query-client";
