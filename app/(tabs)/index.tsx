@@ -257,8 +257,8 @@ function CreateFolderModal({
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onCancel} statusBarTranslucent>
       <View style={styles.modalBackdrop}>
-        <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.45)" }]} onPress={onCancel} />
-        <Animated.View entering={FadeIn.duration(240)} onStartShouldSetResponder={() => true} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
+        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={onCancel} />
+        <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
           <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
           <View style={styles.sheetHeader}>
             <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>New Folder</Text>
@@ -321,8 +321,8 @@ function RenameModal({
   return (
     <Modal visible={!!target} transparent animationType="none" onRequestClose={onCancel} statusBarTranslucent>
       <View style={styles.modalBackdrop}>
-        <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.45)" }]} onPress={onCancel} />
-        <Animated.View entering={FadeIn.duration(240)} onStartShouldSetResponder={() => true} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
+        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={onCancel} />
+        <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
           <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
           <View style={styles.sheetHeader}>
             <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
@@ -383,8 +383,8 @@ function OptionsSheet({
   return (
     <Modal visible={!!target} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <View style={styles.modalBackdrop}>
-        <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.45)" }]} onPress={onClose} />
-        <Animated.View entering={FadeIn.duration(240)} onStartShouldSetResponder={() => true} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
+        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={onClose} />
+        <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
           <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
           <View style={styles.sheetHeader}>
             <View style={styles.optionsTargetInfo}>
@@ -452,8 +452,8 @@ function DeleteConfirmModal({
   return (
     <Modal visible={!!target} transparent animationType="none" onRequestClose={onCancel} statusBarTranslucent>
       <View style={styles.modalBackdrop}>
-        <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.45)" }]} onPress={onCancel} />
-        <Animated.View entering={FadeIn.duration(240)} onStartShouldSetResponder={() => true} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
+        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={onCancel} />
+        <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
           <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
           <View style={styles.deleteSheetBody}>
             <View style={[styles.deleteIconWrap, { backgroundColor: Colors.coral + "14" }]}>
@@ -492,8 +492,8 @@ function LanguagePickerModal({ visible, onClose, theme }: { visible: boolean; on
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <View style={styles.modalBackdrop}>
-        <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.45)" }]} onPress={onClose} />
-        <Animated.View entering={FadeIn.duration(240)} onStartShouldSetResponder={() => true} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
+        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={onClose} />
+        <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
           <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
           <View style={styles.sheetHeader}>
             <Pressable onPress={onClose} style={styles.sheetClose}>
@@ -559,8 +559,8 @@ function PromoCodeModal({ visible, onClose, theme }: { visible: boolean; onClose
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose} statusBarTranslucent>
       <View style={styles.modalBackdrop}>
-        <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.45)" }]} onPress={handleClose} />
-        <Animated.View entering={FadeIn.duration(240)} onStartShouldSetResponder={() => true} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
+        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={handleClose} />
+        <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
           <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
           <View style={styles.sheetHeader}>
             <Pressable onPress={handleClose} style={styles.sheetClose}>
@@ -641,8 +641,8 @@ function SettingsModal({ visible, onClose, theme }: { visible: boolean; onClose:
     <>
       <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
         <View style={styles.modalBackdrop}>
-          <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.45)" }]} onPress={onClose} />
-          <Animated.View entering={FadeIn.duration(240)} onStartShouldSetResponder={() => true} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
+          <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={onClose} />
+          <Animated.View entering={FadeIn.duration(240)} style={[styles.modalSheet, { backgroundColor: theme.card }]}>
             <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
             <View style={styles.sheetHeader}>
               <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>Settings</Text>
@@ -1193,7 +1193,7 @@ const styles = StyleSheet.create({
 
   // Shared modal
   modalBackdrop: { flex: 1 },
-  modalSheet: { position: "absolute", bottom: 0, left: 0, right: 0, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "85%", shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.12, shadowRadius: 20, elevation: 20 },
+  modalSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "85%", shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.12, shadowRadius: 20, elevation: 20 },
   sheetHandle: { alignItems: "center", paddingTop: 12, paddingBottom: 4 },
   handleBar: { width: 36, height: 4, borderRadius: 2 },
   sheetHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 16 },
