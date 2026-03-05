@@ -318,11 +318,18 @@ export default function RecordScreen() {
           TRANSCRIBE_TIMEOUT_MS
         );
       } catch (e: any) {
-        if (e?.name === "AbortError") throw new Error("Upload timed out. Please check your connection and try again.");
-        throw e;
+        if (e?.name === "AbortError") throw new Error("Processing timed out. You can retry by reopening the app.");
+        throw new Error("Could not reach the server. Please check your internet connection and try again.");
       }
 
-      if (!response.ok) throw new Error("Transcription failed");
+      if (!response.ok) {
+        let errMsg = "Transcription failed";
+        try {
+          const err = await response.json();
+          errMsg = err.error || errMsg;
+        } catch {}
+        throw new Error(errMsg);
+      }
 
       setStatusMsg("Generating notes...");
       const data = await response.json();
@@ -485,8 +492,10 @@ const stopNativeRecording = async (): Promise<{ base64: string; filename: string
           TRANSCRIBE_TIMEOUT_MS
         );
       } catch (e: any) {
-        if (e?.name === "AbortError") throw new Error("Upload timed out. Please check your connection and try again.");
-        throw e;
+        if (e?.name === "AbortError") {
+          throw new Error("Processing timed out. Your recording is saved — open the app again to retry.");
+        }
+        throw new Error("Could not reach the server. Please check your internet connection and try again. Your recording is saved.");
       }
 
       if (!transcribeResponse.ok) {

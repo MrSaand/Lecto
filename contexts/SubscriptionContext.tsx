@@ -199,7 +199,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       }
       return { success: false, message: data.message };
     } catch {
-      return { success: false, message: "Could not connect to the server. Please try again." };
+      return { success: false, message: "Could not connect to the server. Please check your internet connection and try again." };
     }
   };
 
