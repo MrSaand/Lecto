@@ -29,6 +29,7 @@ import Animated, {
   withTiming,
   withSpring,
   runOnJS,
+  Easing,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 
@@ -350,7 +351,7 @@ function ItemActionsModal({
       pageOpacity.value = 1;
       setName(target.name);
       backdropAlpha.value = withTiming(1, { duration: 200 });
-      sheetTranslateY.value = withSpring(0, { damping: 22, stiffness: 220 });
+      sheetTranslateY.value = withTiming(0, { duration: 280, easing: Easing.out(Easing.cubic) });
     }
   }, [target?.id]);
 

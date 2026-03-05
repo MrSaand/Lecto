@@ -18,7 +18,10 @@ import { Ionicons, Feather } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { useRecordings } from "@/contexts/RecordingsContext";
 import { useSettings } from "@/contexts/SettingsContext";
-import Animated, { FadeIn, FadeInDown, FadeInRight, SlideInDown } from "react-native-reanimated";
+import Animated, {
+  FadeIn, FadeInDown, FadeInRight, SlideInDown,
+  useSharedValue, useAnimatedStyle, withTiming, runOnJS, Easing,
+} from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { fetch } from "expo/fetch";
 import { getApiUrl } from "@/lib/query-client";
@@ -79,16 +82,68 @@ export default function DetailScreen() {
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
   const bottomPadding = Platform.OS === "web" ? 34 : insets.bottom;
 
+  // ── Rename modal animation ──
+  const renameBackdropAlpha = useSharedValue(0);
+  const renameSheetY = useSharedValue(400);
+  const isClosingRenameRef = useRef(false);
+  const animatedRenameBackdrop = useAnimatedStyle(() => ({ opacity: renameBackdropAlpha.value }));
+  const animatedRenameSheet = useAnimatedStyle(() => ({ transform: [{ translateY: renameSheetY.value }] }));
+
+  const openRenameModal = () => {
+    isClosingRenameRef.current = false;
+    renameBackdropAlpha.value = withTiming(1, { duration: 200 });
+    renameSheetY.value = withTiming(0, { duration: 280, easing: Easing.out(Easing.cubic) });
+  };
+
+  const closeRenameModal = (afterClose?: () => void) => {
+    if (isClosingRenameRef.current) return;
+    isClosingRenameRef.current = true;
+    renameBackdropAlpha.value = withTiming(0, { duration: 180 });
+    renameSheetY.value = withTiming(400, { duration: 220 }, (done) => {
+      if (done) {
+        runOnJS(setShowRename)(false);
+        if (afterClose) runOnJS(afterClose)();
+      }
+    });
+  };
+
+  // ── Delete modal animation ──
+  const deleteBackdropAlpha = useSharedValue(0);
+  const deleteSheetY = useSharedValue(400);
+  const isClosingDeleteRef = useRef(false);
+  const animatedDeleteBackdrop = useAnimatedStyle(() => ({ opacity: deleteBackdropAlpha.value }));
+  const animatedDeleteSheet = useAnimatedStyle(() => ({ transform: [{ translateY: deleteSheetY.value }] }));
+
+  const openDeleteModal = () => {
+    isClosingDeleteRef.current = false;
+    deleteBackdropAlpha.value = withTiming(1, { duration: 200 });
+    deleteSheetY.value = withTiming(0, { duration: 280, easing: Easing.out(Easing.cubic) });
+  };
+
+  const closeDeleteModal = (afterClose?: () => void) => {
+    if (isClosingDeleteRef.current) return;
+    isClosingDeleteRef.current = true;
+    deleteBackdropAlpha.value = withTiming(0, { duration: 180 });
+    deleteSheetY.value = withTiming(400, { duration: 220 }, (done) => {
+      if (done) {
+        runOnJS(setShowDeleteConfirm)(false);
+        if (afterClose) runOnJS(afterClose)();
+      }
+    });
+  };
+
   const handleDelete = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setShowDeleteConfirm(true);
+    openDeleteModal();
   };
 
   const handleDeleteConfirm = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    setShowDeleteConfirm(false);
-    await deleteRecording(id);
-    router.back();
+    closeDeleteModal(async () => {
+      await deleteRecording(id);
+      router.back();
+    });
   };
 
   const handleShare = async () => {
@@ -207,7 +262,7 @@ export default function DetailScreen() {
         </View>
         <View style={styles.headerActions}>
           <Pressable
-            onPress={() => { setRenameValue(recording.title); setShowRename(true); }}
+            onPress={() => { setRenameValue(recording.title); setShowRename(true); openRenameModal(); }}
             style={styles.headerBtn}
           >
             <Feather name="edit-2" size={19} color={theme.textSecondary} />
@@ -423,110 +478,116 @@ export default function DetailScreen() {
       )}
 
       {/* Rename modal */}
-      <Modal visible={showRename} transparent animationType="slide" onRequestClose={() => setShowRename(false)} statusBarTranslucent>
-        <KeyboardAvoidingView
-          style={styles.renameBackdrop}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={0}
-        >
-          <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={() => setShowRename(false)} />
-          <View style={[styles.renameSheet, { backgroundColor: theme.card }]}>
-            <View style={styles.renameHandle}>
-              <View style={[styles.renameHandleBar, { backgroundColor: theme.border }]} />
-            </View>
-            <View style={styles.renameHeader}>
-              <Text style={[styles.renameTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>Rename Lecture</Text>
-              <Pressable onPress={() => setShowRename(false)} style={styles.renameClose}>
-                <Ionicons name="close" size={22} color={theme.textSecondary} />
-              </Pressable>
-            </View>
-            <View style={styles.renameBody}>
-              <TextInput
-                style={[styles.renameInput, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border, fontFamily: "DMSans_400Regular" }]}
-                value={renameValue}
-                onChangeText={setRenameValue}
-                autoFocus
-                selectTextOnFocus
-                returnKeyType="done"
-                onSubmitEditing={async () => {
-                  const trimmed = renameValue.trim();
-                  if (!trimmed) return;
-                  await renameRecording(id, trimmed);
-                  setShowRename(false);
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                }}
-              />
-              <Pressable
-                onPress={async () => {
-                  const trimmed = renameValue.trim();
-                  if (!trimmed) return;
-                  await renameRecording(id, trimmed);
-                  setShowRename(false);
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                }}
-                style={({ pressed }) => [styles.renameSaveBtn, { backgroundColor: renameValue.trim() ? Colors.indigo : theme.border, opacity: pressed ? 0.8 : 1 }]}
-              >
-                <Feather name="check" size={18} color={renameValue.trim() ? "#fff" : theme.textTertiary} />
-                <Text style={[styles.renameSaveBtnText, { color: renameValue.trim() ? "#fff" : theme.textTertiary, fontFamily: "DMSans_700Bold" }]}>Save</Text>
-              </Pressable>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
+      <Modal visible={showRename} transparent animationType="none" onRequestClose={() => closeRenameModal()} statusBarTranslucent>
+        <View style={styles.renameBackdrop}>
+          <Animated.View
+            style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(0,0,0,0.45)" }, animatedRenameBackdrop]}
+            pointerEvents="none"
+          />
+          <KeyboardAvoidingView
+            style={{ flex: 1, justifyContent: "flex-end" }}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={0}
+          >
+            <Pressable style={{ flex: 1 }} onPress={() => closeRenameModal()} />
+            <Animated.View style={[styles.renameSheet, { backgroundColor: theme.card }, animatedRenameSheet]}>
+              <View style={styles.renameHandle}>
+                <View style={[styles.renameHandleBar, { backgroundColor: theme.border }]} />
+              </View>
+              <View style={styles.renameHeader}>
+                <Text style={[styles.renameTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>Rename Lecture</Text>
+                <Pressable onPress={() => closeRenameModal()} style={styles.renameClose}>
+                  <Ionicons name="close" size={22} color={theme.textSecondary} />
+                </Pressable>
+              </View>
+              <View style={styles.renameBody}>
+                <TextInput
+                  style={[styles.renameInput, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border, fontFamily: "DMSans_400Regular" }]}
+                  value={renameValue}
+                  onChangeText={setRenameValue}
+                  autoFocus
+                  selectTextOnFocus
+                  returnKeyType="done"
+                  onSubmitEditing={async () => {
+                    const trimmed = renameValue.trim();
+                    if (!trimmed) return;
+                    closeRenameModal(async () => {
+                      await renameRecording(id, trimmed);
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    });
+                  }}
+                />
+                <Pressable
+                  onPress={async () => {
+                    const trimmed = renameValue.trim();
+                    if (!trimmed) return;
+                    closeRenameModal(async () => {
+                      await renameRecording(id, trimmed);
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    });
+                  }}
+                  style={({ pressed }) => [styles.renameSaveBtn, { backgroundColor: renameValue.trim() ? Colors.indigo : theme.border, opacity: pressed ? 0.8 : 1 }]}
+                >
+                  <Feather name="check" size={18} color={renameValue.trim() ? "#fff" : theme.textTertiary} />
+                  <Text style={[styles.renameSaveBtnText, { color: renameValue.trim() ? "#fff" : theme.textTertiary, fontFamily: "DMSans_700Bold" }]}>Save</Text>
+                </Pressable>
+              </View>
+            </Animated.View>
+          </KeyboardAvoidingView>
+        </View>
       </Modal>
 
       {/* Delete confirmation sheet */}
       <Modal
         visible={showDeleteConfirm}
         transparent
-        animationType="slide"
-        onRequestClose={() => setShowDeleteConfirm(false)}
+        animationType="none"
+        onRequestClose={() => closeDeleteModal()}
         statusBarTranslucent
       >
-        <Pressable
-          style={styles.deleteBackdrop}
-          onPress={() => setShowDeleteConfirm(false)}
-        >
-          <View
-            style={[styles.deleteSheet, { backgroundColor: theme.card }]}
-          >
-            <Pressable>
-              <View style={styles.deleteHandle}>
-                <View style={[styles.deleteHandleBar, { backgroundColor: theme.border }]} />
+        <View style={styles.deleteBackdrop}>
+          <Animated.View
+            style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(0,0,0,0.45)" }, animatedDeleteBackdrop]}
+            pointerEvents="none"
+          />
+          <Pressable style={{ flex: 1 }} onPress={() => closeDeleteModal()} />
+          <Animated.View style={[styles.deleteSheet, { backgroundColor: theme.card }, animatedDeleteSheet]}>
+            <View style={styles.deleteHandle}>
+              <View style={[styles.deleteHandleBar, { backgroundColor: theme.border }]} />
+            </View>
+            <View style={styles.deleteBody}>
+              <View style={[styles.deleteIconCircle, { backgroundColor: Colors.coral + "14" }]}>
+                <Feather name="trash-2" size={28} color={Colors.coral} />
               </View>
-              <View style={styles.deleteBody}>
-                <View style={[styles.deleteIconCircle, { backgroundColor: Colors.coral + "14" }]}>
-                  <Feather name="trash-2" size={28} color={Colors.coral} />
-                </View>
-                <Text style={[styles.deleteTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
-                  Delete Lecture?
+              <Text style={[styles.deleteTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
+                Delete Lecture?
+              </Text>
+              <Text style={[styles.deleteRecordingName, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
+                {recording?.title}
+              </Text>
+              <Text style={[styles.deleteWarning, { color: theme.textTertiary, fontFamily: "DMSans_400Regular" }]}>
+                This lecture and all its notes will be permanently deleted. This cannot be undone.
+              </Text>
+            </View>
+            <View style={styles.deleteButtons}>
+              <Pressable
+                onPress={() => closeDeleteModal()}
+                style={({ pressed }) => [styles.deleteCancelBtn, { backgroundColor: theme.border, opacity: pressed ? 0.7 : 1 }]}
+              >
+                <Text style={[styles.deleteCancelText, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>
+                  Cancel
                 </Text>
-                <Text style={[styles.deleteRecordingName, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
-                  {recording?.title}
-                </Text>
-                <Text style={[styles.deleteWarning, { color: theme.textTertiary, fontFamily: "DMSans_400Regular" }]}>
-                  This lecture and all its notes will be permanently deleted. This cannot be undone.
-                </Text>
-              </View>
-              <View style={styles.deleteButtons}>
-                <Pressable
-                  onPress={() => setShowDeleteConfirm(false)}
-                  style={({ pressed }) => [styles.deleteCancelBtn, { backgroundColor: theme.border, opacity: pressed ? 0.7 : 1 }]}
-                >
-                  <Text style={[styles.deleteCancelText, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>
-                    Cancel
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={handleDeleteConfirm}
-                  style={({ pressed }) => [styles.deleteConfirmBtn, { backgroundColor: Colors.coral, opacity: pressed ? 0.8 : 1 }]}
-                >
-                  <Feather name="trash-2" size={16} color="#fff" />
-                  <Text style={[styles.deleteConfirmText, { fontFamily: "DMSans_700Bold" }]}>Delete</Text>
-                </Pressable>
-              </View>
-            </Pressable>
-          </View>
-        </Pressable>
+              </Pressable>
+              <Pressable
+                onPress={handleDeleteConfirm}
+                style={({ pressed }) => [styles.deleteConfirmBtn, { backgroundColor: Colors.coral, opacity: pressed ? 0.8 : 1 }]}
+              >
+                <Feather name="trash-2" size={16} color="#fff" />
+                <Text style={[styles.deleteConfirmText, { fontFamily: "DMSans_700Bold" }]}>Delete</Text>
+              </Pressable>
+            </View>
+          </Animated.View>
+        </View>
       </Modal>
     </View>
   );
@@ -832,7 +893,6 @@ const styles = StyleSheet.create({
   // Delete confirmation sheet
   deleteBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
     justifyContent: "flex-end",
   },
   deleteSheet: {
@@ -890,7 +950,7 @@ const styles = StyleSheet.create({
   deleteConfirmText: { fontSize: 16, color: "#fff" },
 
   // Rename modal
-  renameBackdrop: { flex: 1, justifyContent: "flex-end" },
+  renameBackdrop: { flex: 1 },
   renameSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.12, shadowRadius: 20, elevation: 20 },
   renameHandle: { alignItems: "center", paddingTop: 12, paddingBottom: 4 },
   renameHandleBar: { width: 36, height: 4, borderRadius: 2 },
