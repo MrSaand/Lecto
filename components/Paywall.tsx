@@ -40,7 +40,7 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
   const isDark = colorScheme === "dark";
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
-  const { monthlyPackage, yearlyPackage, purchaseMonthly, purchaseYearly, restorePurchases, refresh } = useSubscription();
+  const { monthlyPackage, yearlyPackage, purchasePackage, restorePurchases, refresh } = useSubscription();
 
   const [selectedPlan, setSelectedPlan] = useState<"monthly" | "yearly">("yearly");
   const [isPurchasing, setIsPurchasing] = useState(false);
@@ -57,19 +57,27 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
 
   const handlePurchase = async () => {
     if (isWeb) return;
-    if (!packagesLoaded) {
-      await refresh();
-      setStatus("error");
-      return;
-    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsPurchasing(true);
     setStatus("");
     setWasRestoreAttempt(false);
     try {
-      const result = selectedPlan === "monthly"
-        ? await purchaseMonthly()
-        : await purchaseYearly();
+      let resolvedMonthly = monthlyPackage;
+      let resolvedYearly = yearlyPackage;
+
+      if (!packagesLoaded) {
+        const loaded = await refresh();
+        resolvedMonthly = loaded.monthlyPackage;
+        resolvedYearly = loaded.yearlyPackage;
+      }
+
+      const pkg = selectedPlan === "monthly" ? resolvedMonthly : resolvedYearly;
+      if (!pkg) {
+        setStatus("error");
+        return;
+      }
+
+      const result = await purchasePackage(pkg);
 
       if (result === "success") {
         setStatus("success");

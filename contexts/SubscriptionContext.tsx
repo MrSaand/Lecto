@@ -24,7 +24,7 @@ interface SubscriptionContextValue extends SubscriptionState {
   purchaseYearly: () => Promise<"success" | "cancelled" | "error">;
   purchasePackage: (pkg: PurchasesPackage) => Promise<"success" | "cancelled" | "error">;
   restorePurchases: () => Promise<boolean>;
-  refresh: () => Promise<void>;
+  refresh: () => Promise<{ monthlyPackage: PurchasesPackage | null; yearlyPackage: PurchasesPackage | null }>;
   redeemPromoCode: (code: string) => Promise<{ success: boolean; message: string; durationDays?: number }>;
 }
 
@@ -87,7 +87,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     })();
   }, []);
 
-  const refresh = async () => {
+  const refresh = async (): Promise<{ monthlyPackage: PurchasesPackage | null; yearlyPackage: PurchasesPackage | null }> => {
     try {
       const [info, offerings] = await Promise.all([
         Purchases.getCustomerInfo(),
@@ -104,14 +104,18 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
       const current = offerings.current;
       setOffering(current);
+      let monthly: PurchasesPackage | null = null;
+      let yearly: PurchasesPackage | null = null;
       if (current) {
-        const monthly = current.monthly ?? current.availablePackages.find((p) => p.packageType === "MONTHLY") ?? null;
-        const yearly = current.annual ?? current.availablePackages.find((p) => p.packageType === "ANNUAL") ?? null;
+        monthly = current.monthly ?? current.availablePackages.find((p) => p.packageType === "MONTHLY") ?? null;
+        yearly = current.annual ?? current.availablePackages.find((p) => p.packageType === "ANNUAL") ?? null;
         setMonthlyPackage(monthly);
         setYearlyPackage(yearly);
       }
+      return { monthlyPackage: monthly, yearlyPackage: yearly };
     } catch (e) {
       console.error("RevenueCat refresh error:", e);
+      return { monthlyPackage: null, yearlyPackage: null };
     }
   };
 

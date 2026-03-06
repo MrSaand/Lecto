@@ -267,7 +267,7 @@ function CreateFolderModal({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel} statusBarTranslucent>
       <KeyboardAvoidingView style={styles.modalBackdrop} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={onCancel} />
+        <Pressable style={{ flex: 1 }} onPress={onCancel} />
         <View style={[styles.modalSheet, { backgroundColor: theme.card }]}>
           <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
           <View style={styles.sheetHeader}>
@@ -389,9 +389,7 @@ function ItemActionsModal({
   return (
     <Modal visible={!!target} transparent animationType="none" onRequestClose={handleClose} statusBarTranslucent>
       <KeyboardAvoidingView style={styles.modalBackdrop} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-        <Animated.View style={[{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }, animatedBackdropStyle]}>
-          <Pressable style={{ flex: 1 }} onPress={() => handleClose()} />
-        </Animated.View>
+        <Pressable style={{ flex: 1 }} onPress={() => handleClose()} />
         <Animated.View style={[styles.modalSheet, { backgroundColor: theme.card }, animatedSheetStyle]}>
           <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
 
@@ -922,6 +920,8 @@ export default function LibraryScreen() {
             placeholderTextColor={theme.textTertiary}
             value={search}
             onChangeText={setSearch}
+            returnKeyType="search"
+            blurOnSubmit
           />
           {search.length > 0 && (
             <Pressable onPress={() => setSearch("")}><Feather name="x" size={16} color={theme.textTertiary} /></Pressable>
@@ -951,6 +951,8 @@ export default function LibraryScreen() {
             keyExtractor={(r) => r.id}
             contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 90 }]}
             showsVerticalScrollIndicator={false}
+            keyboardDismissMode="on-drag"
+            keyboardShouldPersistTaps="handled"
             renderItem={({ item }) => (
               <RecordingCard
                 item={item}
@@ -986,6 +988,8 @@ export default function LibraryScreen() {
           keyExtractor={(item) => item.data.id}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + (Platform.OS === "web" ? 84 : 90) }]}
           showsVerticalScrollIndicator={false}
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="handled"
           renderItem={({ item }) => {
             if (item.kind === "folder") {
               const folder = item.data as Folder;
@@ -1136,7 +1140,7 @@ const styles = StyleSheet.create({
 
   // Create/rename input
   inputSection: { paddingHorizontal: 20, paddingBottom: 32, gap: 12 },
-  nameInput: { borderRadius: 14, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 13, fontSize: 16 },
+  nameInput: { borderRadius: 14, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 13, fontSize: 16, fontFamily: "DMSans_400Regular" },
   createBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 15, borderRadius: 16 },
   createBtnText: { fontSize: 16 },
 
