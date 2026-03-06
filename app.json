@@ -15,18 +15,24 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.lecto.app",
+      "bundleIdentifier": "com.lectoAI.app",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Lecto needs microphone access to record your meetings and lectures.",
         "UIBackgroundModes": [
+          "audio",
           "audio"
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.lecto.app",
       "permissions": [
-        "RECORD_AUDIO"
+        "RECORD_AUDIO",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE_MICROPHONE",
+        "android.permission.POST_NOTIFICATIONS"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#0E1033",
@@ -58,6 +64,11 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "e788b743-19f2-4754-ba4a-d308de038080"
+      }
     }
   }
 }
