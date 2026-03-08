@@ -11,6 +11,7 @@ import {
   Modal,
   ScrollView,
   KeyboardAvoidingView,
+  Keyboard,
 } from "react-native";
 import { shareRecordingAsPdf, shareFolderAsPdf } from "@/lib/pdf";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -360,6 +361,7 @@ function ItemActionsModal({
   const handleClose = (afterClose?: () => void) => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
+    Keyboard.dismiss();
     backdropAlpha.value = withTiming(0, { duration: 180 });
     sheetTranslateY.value = withTiming(500, { duration: 220 }, (done) => {
       if (done) {
@@ -389,7 +391,9 @@ function ItemActionsModal({
   return (
     <Modal visible={!!target} transparent animationType="none" onRequestClose={handleClose} statusBarTranslucent>
       <KeyboardAvoidingView style={styles.modalBackdrop} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-        <Pressable style={{ flex: 1 }} onPress={() => handleClose()} />
+        <Animated.View style={[{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }, animatedBackdropStyle]}>
+          <Pressable style={{ flex: 1 }} onPress={() => handleClose()} />
+        </Animated.View>
         <Animated.View style={[styles.modalSheet, { backgroundColor: theme.card }, animatedSheetStyle]}>
           <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
 
@@ -443,7 +447,7 @@ function ItemActionsModal({
                   <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
                     Rename {isFolder ? "Folder" : "Lecture"}
                   </Text>
-                  <Pressable onPress={handleClose} style={styles.sheetClose}>
+                  <Pressable onPress={() => { Keyboard.dismiss(); navigateTo("options"); }} style={styles.sheetClose}>
                     <Ionicons name="close" size={22} color={theme.textSecondary} />
                   </Pressable>
                 </View>
@@ -530,6 +534,19 @@ function SettingsModal({ visible, onClose, onPaywall, theme }: {
 
   const settingsOpacity = useSharedValue(1);
   const animatedSettingsStyle = useAnimatedStyle(() => ({ opacity: settingsOpacity.value }));
+  const settingsSheetY = useSharedValue(600);
+  const settingsBackdropAlpha = useSharedValue(0);
+  const isSettingsClosingRef = React.useRef(false);
+  const animatedSettingsSheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: settingsSheetY.value }] }));
+  const animatedSettingsBackdropStyle = useAnimatedStyle(() => ({ opacity: settingsBackdropAlpha.value }));
+
+  React.useEffect(() => {
+    if (visible) {
+      isSettingsClosingRef.current = false;
+      settingsBackdropAlpha.value = withTiming(1, { duration: 200 });
+      settingsSheetY.value = withTiming(0, { duration: 280, easing: Easing.out(Easing.cubic) });
+    }
+  }, [visible]);
 
   const navigateTo = (newPage: SettingsPage) => {
     settingsOpacity.value = withTiming(0, { duration: 100 }, (done) => {
@@ -540,12 +557,26 @@ function SettingsModal({ visible, onClose, onPaywall, theme }: {
     });
   };
 
-  const handleClose = () => {
+  const resetAndCloseSettings = () => {
     setDisplayPage("main");
-    settingsOpacity.value = 1;
     setPromoCode("");
     setPromoStatus(null);
+    settingsOpacity.value = 1;
     onClose();
+  };
+
+  const handleClose = () => {
+    if (isSettingsClosingRef.current) return;
+    isSettingsClosingRef.current = true;
+    Keyboard.dismiss();
+    settingsBackdropAlpha.value = withTiming(0, { duration: 180 });
+    settingsSheetY.value = withTiming(600, { duration: 220 }, (done) => {
+      if (done) {
+        settingsSheetY.value = 600;
+        settingsBackdropAlpha.value = 0;
+        runOnJS(resetAndCloseSettings)();
+      }
+    });
   };
 
   const handleRestore = async () => {
@@ -570,10 +601,12 @@ function SettingsModal({ visible, onClose, onPaywall, theme }: {
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose} statusBarTranslucent>
-      <View style={styles.modalBackdrop}>
-        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={handleClose} />
-        <View style={[styles.modalSheet, { backgroundColor: theme.card }]}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose} statusBarTranslucent>
+      <KeyboardAvoidingView style={styles.modalBackdrop} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+        <Animated.View style={[{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }, animatedSettingsBackdropStyle]}>
+          <Pressable style={{ flex: 1 }} onPress={handleClose} />
+        </Animated.View>
+        <Animated.View style={[styles.modalSheet, { backgroundColor: theme.card }, animatedSettingsSheetStyle]}>
           <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
 
           <Animated.View style={animatedSettingsStyle}>
@@ -707,8 +740,8 @@ function SettingsModal({ visible, onClose, onPaywall, theme }: {
               </>
             )}
           </Animated.View>
-        </View>
-      </View>
+        </Animated.View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -1131,7 +1164,7 @@ const styles = StyleSheet.create({
 
   // Shared modal
   modalBackdrop: { flex: 1 },
-  modalSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "85%", shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.12, shadowRadius: 20, elevation: 20 },
+  modalSheet: { borderRadius: 24, maxHeight: "85%", shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.12, shadowRadius: 20, elevation: 20 },
   sheetHandle: { alignItems: "center", paddingTop: 12, paddingBottom: 4 },
   handleBar: { width: 36, height: 4, borderRadius: 2 },
   sheetHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 16 },
