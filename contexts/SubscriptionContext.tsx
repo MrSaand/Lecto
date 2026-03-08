@@ -103,15 +103,34 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       }
 
       const current = offerings.current;
+      const monthlyOffering = offerings.all["monthly"] ?? null;
+      const yearlyOffering = offerings.all["yearly"] ?? null;
       setOffering(current);
+
       let monthly: PurchasesPackage | null = null;
       let yearly: PurchasesPackage | null = null;
-      if (current) {
+
+      // Prefer dedicated "monthly" / "yearly" offerings, fall back to current
+      if (monthlyOffering) {
+        monthly = monthlyOffering.monthly
+          ?? monthlyOffering.availablePackages.find((p) => p.packageType === "MONTHLY")
+          ?? monthlyOffering.availablePackages[0]
+          ?? null;
+      } else if (current) {
         monthly = current.monthly ?? current.availablePackages.find((p) => p.packageType === "MONTHLY") ?? null;
-        yearly = current.annual ?? current.availablePackages.find((p) => p.packageType === "ANNUAL") ?? null;
-        setMonthlyPackage(monthly);
-        setYearlyPackage(yearly);
       }
+
+      if (yearlyOffering) {
+        yearly = yearlyOffering.annual
+          ?? yearlyOffering.availablePackages.find((p) => p.packageType === "ANNUAL")
+          ?? yearlyOffering.availablePackages[0]
+          ?? null;
+      } else if (current) {
+        yearly = current.annual ?? current.availablePackages.find((p) => p.packageType === "ANNUAL") ?? null;
+      }
+
+      setMonthlyPackage(monthly);
+      setYearlyPackage(yearly);
       return { monthlyPackage: monthly, yearlyPackage: yearly };
     } catch (e) {
       console.error("RevenueCat refresh error:", e);
