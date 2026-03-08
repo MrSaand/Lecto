@@ -5,7 +5,7 @@ import { Platform } from "react-native";
 import { getApiUrl } from "@/lib/query-client";
 
 const API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY ?? "";
-const ENTITLEMENT_ID = "premium";
+const ENTITLEMENT_ID = "Lecto Pro";
 const LOCAL_SUB_KEY = "@lecto_subscription";
 const USED_PROMO_KEY = "@lecto_used_promos";
 export const FREE_RECORDING_LIMIT = 2;
