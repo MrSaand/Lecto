@@ -144,7 +144,7 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bottomInset + 16 }}>
             <Animated.View entering={FadeIn.delay(80).duration(350)} style={styles.heroSection}>
               <Image
-                source={require("../assets/images/icon.png")}
+                source={require("../assets/images/lecto-pro-crown.png")}
                 style={styles.appIcon}
               />
               <Text style={[styles.heroTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   heroSection: { alignItems: "center", paddingTop: 40, paddingBottom: 20, paddingHorizontal: 24, gap: 10 },
-  appIcon: { width: 80, height: 80, borderRadius: 18, marginBottom: 4 },
+  appIcon: { width: 110, height: 110, borderRadius: 26, marginBottom: 4 },
   heroTitle: { fontSize: 28, letterSpacing: -0.5 },
   heroSubtitle: { fontSize: 15, textAlign: "center", lineHeight: 22, maxWidth: 300 },
   featuresSection: { paddingHorizontal: 24, paddingBottom: 20, gap: 12 },
