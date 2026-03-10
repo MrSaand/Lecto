@@ -12,7 +12,9 @@ function getOpenAI(): OpenAI {
   }
   return new OpenAI({
     apiKey,
-    baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+    baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined,
+    timeout: 120_000,
+    maxRetries: 1,
   });
 }
 
@@ -43,10 +45,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const file = await toFile(audioBuffer, `audio.${ext}`, { type: mimeType });
 
-      // Pass language code to Whisper so it transcribes in the original spoken language
       const transcriptionResponse = await getOpenAI().audio.transcriptions.create({
         file,
-        model: "gpt-4o-mini-transcribe",
+        model: "whisper-1",
         ...(language !== "en" ? { language } : {}),
       });
 
