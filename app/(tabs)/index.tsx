@@ -575,7 +575,10 @@ function SettingsModal({ visible, onClose, onPaywall, theme }: {
         settingsSheetY.value = 600;
         settingsBackdropAlpha.value = 0;
         runOnJS(resetAndCloseSettings)();
-        if (afterClose) runOnJS(afterClose)();
+        if (afterClose) {
+          const _cb = afterClose;
+          runOnJS(() => { setTimeout(_cb, 80); })();
+        }
       }
     });
   };

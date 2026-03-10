@@ -102,31 +102,58 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         await grantSubscription();
       }
 
-      const current = offerings.current;
-      const monthlyOffering = offerings.all["monthly"] ?? null;
-      const yearlyOffering = offerings.all["yearly"] ?? null;
-      setOffering(current);
+      setOffering(offerings.current);
+
+      // Collect every package from every offering
+      const allPackages: PurchasesPackage[] = Object.values(offerings.all)
+        .flatMap((o) => o.availablePackages);
 
       let monthly: PurchasesPackage | null = null;
       let yearly: PurchasesPackage | null = null;
 
-      // Prefer dedicated "monthly" / "yearly" offerings, fall back to current
-      if (monthlyOffering) {
+      // Pass 1 — dedicated "monthly" / "yearly" offerings
+      const monthlyOffering = offerings.all["monthly"];
+      const yearlyOffering = offerings.all["yearly"];
+      if (monthlyOffering?.availablePackages.length) {
         monthly = monthlyOffering.monthly
           ?? monthlyOffering.availablePackages.find((p) => p.packageType === "MONTHLY")
           ?? monthlyOffering.availablePackages[0]
           ?? null;
-      } else if (current) {
-        monthly = current.monthly ?? current.availablePackages.find((p) => p.packageType === "MONTHLY") ?? null;
       }
-
-      if (yearlyOffering) {
+      if (yearlyOffering?.availablePackages.length) {
         yearly = yearlyOffering.annual
           ?? yearlyOffering.availablePackages.find((p) => p.packageType === "ANNUAL")
           ?? yearlyOffering.availablePackages[0]
           ?? null;
-      } else if (current) {
-        yearly = current.annual ?? current.availablePackages.find((p) => p.packageType === "ANNUAL") ?? null;
+      }
+
+      // Pass 2 — current offering
+      if (!monthly && offerings.current) {
+        monthly = offerings.current.monthly
+          ?? offerings.current.availablePackages.find((p) => p.packageType === "MONTHLY")
+          ?? null;
+      }
+      if (!yearly && offerings.current) {
+        yearly = offerings.current.annual
+          ?? offerings.current.availablePackages.find((p) => p.packageType === "ANNUAL")
+          ?? null;
+      }
+
+      // Pass 3 — search all packages by type
+      if (!monthly) monthly = allPackages.find((p) => p.packageType === "MONTHLY") ?? null;
+      if (!yearly) yearly = allPackages.find((p) => p.packageType === "ANNUAL") ?? null;
+
+      // Pass 4 — last resort: use any available package
+      if (!monthly && !yearly && allPackages.length >= 2) {
+        monthly = allPackages[0];
+        yearly = allPackages[1];
+      } else if (!monthly && !yearly && allPackages.length === 1) {
+        monthly = allPackages[0];
+        yearly = allPackages[0];
+      } else if (!monthly && yearly) {
+        monthly = yearly;
+      } else if (!yearly && monthly) {
+        yearly = monthly;
       }
 
       setMonthlyPackage(monthly);
@@ -154,7 +181,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       await grantSubscription();
       return "success";
     } catch (e: any) {
-      if (e.userCancelled) return "cancelled";
+      if (e.userCancelled === true || e.code === 1 || e.errorCode === 1) return "cancelled";
       console.error("Purchase error:", e);
       return "error";
     }

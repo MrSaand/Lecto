@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -45,11 +45,28 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
   const [selectedPlan, setSelectedPlan] = useState<"monthly" | "yearly">("yearly");
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [status, setStatus] = useState<StatusType>("");
   const [wasRestoreAttempt, setWasRestoreAttempt] = useState(false);
+  const hasRefreshedRef = useRef(false);
 
   const isWeb = Platform.OS === "web";
   const packagesLoaded = !!(monthlyPackage || yearlyPackage);
+
+  useEffect(() => {
+    if (visible && !isWeb) {
+      hasRefreshedRef.current = false;
+      setStatus("");
+    }
+  }, [visible]);
+
+  useEffect(() => {
+    if (visible && !isWeb && !hasRefreshedRef.current) {
+      hasRefreshedRef.current = true;
+      setIsRefreshing(true);
+      refresh().finally(() => setIsRefreshing(false));
+    }
+  }, [visible]);
 
   const monthlyPrice = monthlyPackage?.product.priceString ?? "$9.99";
   const yearlyPrice = yearlyPackage?.product.priceString ?? "$49.99";
@@ -236,14 +253,19 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
                 <>
                   <Pressable
                     onPress={handlePurchase}
-                    disabled={isPurchasing || isRestoring}
+                    disabled={isPurchasing || isRestoring || isRefreshing}
                     style={({ pressed }) => [
                       styles.ctaBtn,
-                      { backgroundColor: Colors.indigo, opacity: pressed || isPurchasing ? 0.85 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] },
+                      { backgroundColor: Colors.indigo, opacity: pressed || isPurchasing || isRefreshing ? 0.85 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] },
                     ]}
                   >
-                    {isPurchasing ? (
+                    {isPurchasing || isRefreshing ? (
                       <ActivityIndicator color="#fff" />
+                    ) : status === "nopkg" ? (
+                      <>
+                        <Ionicons name="refresh" size={18} color="#fff" />
+                        <Text style={[styles.ctaBtnText, { fontFamily: "DMSans_700Bold" }]}>Try Again</Text>
+                      </>
                     ) : (
                       <>
                         <Ionicons name="sparkles" size={18} color="#fff" />
