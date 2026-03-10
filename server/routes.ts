@@ -28,7 +28,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/transcribe", async (req, res) => {
     try {
-      const { audio, filename = "recording.m4a", language = "en" } = req.body;
+      const { audio, filename = "recording.m4a", language = "en", includeActionItems = true } = req.body;
       if (!audio) {
         return res.status(400).json({ error: "Audio data required" });
       }
@@ -66,14 +66,21 @@ Analyze the provided transcript and return a JSON object with EXACTLY this struc
   ],
   "speakers": ["Speaker 1", "Speaker 2", ...],
   "transcript": [
-    { "speaker": "Speaker 1", "timestamp": "0:00", "text": "transcript text in ${langName}" },
+    { "speaker": "Speaker 1", "timestamp": "0:00", "text": "paragraph summarizing this section in ${langName}" },
     ...
   ],
   "keyTopics": ["topic in ${langName}", ...]
 }
 
-Speaker assignment rules: assign labels based on changes in speaking style or role. If one speaker, use "Speaker 1". For Q&A, use "Speaker 1" and "Speaker 2". Distribute timestamps evenly.
-Action items: extract concrete next steps with the most likely responsible speaker.
+TRANSCRIPT RULES — do NOT reproduce speech verbatim:
+- Group the lecture into natural sections of 2–5 minutes each
+- Each "text" entry should be 2–4 sentences capturing the main content of that time period
+- Aim for 5–15 transcript entries total regardless of lecture length
+- Assign timestamps evenly across the full recording duration
+- Assign speaker labels based on changes in speaking role or style; single lecturer = "Speaker 1"
+
+KEY TOPICS: Include at most 5 of the most important topics.
+${!includeActionItems ? 'ACTION ITEMS: Return an empty array [] for actionItems.' : 'ACTION ITEMS: Extract concrete next steps with the most likely responsible speaker.'}
 Return ONLY valid JSON with no markdown or code fences.`;
 
       const analysisResponse = await getOpenAI().chat.completions.create({
@@ -82,7 +89,7 @@ Return ONLY valid JSON with no markdown or code fences.`;
           { role: "system", content: systemPrompt },
           { role: "user", content: `Transcript:\n${rawTranscript}` },
         ],
-        max_tokens: 4096,
+        max_tokens: 16384,
       });
 
       const content = analysisResponse.choices[0]?.message?.content || "{}";
@@ -140,7 +147,7 @@ Return ONLY valid JSON with no markdown or code fences.`;
   // Called once after all chunks have been transcribed and joined
   app.post("/api/analyze", express.json({ limit: "2mb" }), async (req, res) => {
     try {
-      const { rawTranscript, language = "en" } = req.body;
+      const { rawTranscript, language = "en", includeActionItems = true } = req.body;
       if (!rawTranscript) return res.status(400).json({ error: "rawTranscript is required" });
 
       const langName = LANGUAGE_NAMES[language] || "English";
@@ -158,14 +165,21 @@ Analyze the provided transcript and return a JSON object with EXACTLY this struc
   ],
   "speakers": ["Speaker 1", "Speaker 2", ...],
   "transcript": [
-    { "speaker": "Speaker 1", "timestamp": "0:00", "text": "transcript text in ${langName}" },
+    { "speaker": "Speaker 1", "timestamp": "0:00", "text": "paragraph summarizing this section in ${langName}" },
     ...
   ],
   "keyTopics": ["topic in ${langName}", ...]
 }
 
-Speaker assignment rules: assign labels based on changes in speaking style or role. If one speaker, use "Speaker 1". For Q&A, use "Speaker 1" and "Speaker 2". Distribute timestamps evenly across the full duration.
-Action items: extract concrete next steps with the most likely responsible speaker.
+TRANSCRIPT RULES — do NOT reproduce speech verbatim:
+- Group the lecture into natural sections of 2–5 minutes each
+- Each "text" entry should be 2–4 sentences capturing the main content of that time period
+- Aim for 5–15 transcript entries total regardless of lecture length
+- Assign timestamps evenly across the full recording duration
+- Assign speaker labels based on changes in speaking role or style; single lecturer = "Speaker 1"
+
+KEY TOPICS: Include at most 5 of the most important topics.
+${!includeActionItems ? 'ACTION ITEMS: Return an empty array [] for actionItems.' : 'ACTION ITEMS: Extract concrete next steps with the most likely responsible speaker.'}
 Return ONLY valid JSON with no markdown or code fences.`;
 
       const analysisResponse = await getOpenAI().chat.completions.create({
@@ -174,7 +188,7 @@ Return ONLY valid JSON with no markdown or code fences.`;
           { role: "system", content: systemPrompt },
           { role: "user", content: `Transcript:\n${rawTranscript}` },
         ],
-        max_tokens: 4096,
+        max_tokens: 16384,
       });
 
       const content = analysisResponse.choices[0]?.message?.content || "{}";

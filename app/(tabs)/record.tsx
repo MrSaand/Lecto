@@ -36,6 +36,7 @@ import { useAudioRecorder, setAudioModeAsync, AudioModule, IOSOutputFormat, Audi
 import { router } from "expo-router";
 
 const PENDING_KEY = "@lecto_pending_lecture";
+const ACTION_ITEMS_KEY = "@lecto_want_action_items";
 const TRANSCRIBE_CHUNK_TIMEOUT_MS = 4 * 60 * 1000;  // 4 min per chunk
 const ANALYZE_TIMEOUT_MS = 3 * 60 * 1000;            // 3 min for GPT-4o analysis
 const CHUNK_INTERVAL_MS = 90 * 60 * 1000;            // auto-chunk every 90 minutes
@@ -112,6 +113,8 @@ export default function RecordScreen() {
   const [recordState, setRecordState] = useState<RecordState>("idle");
   const [elapsed, setElapsed] = useState(0);
   const [statusMsg, setStatusMsg] = useState("");
+  const [wantActionItems, setWantActionItems] = useState(true);
+  const [processingEtaSecs, setProcessingEtaSecs] = useState(-1);
 
   // Web recording refs
   const mediaRecorderRef = useRef<any>(null);
@@ -119,6 +122,7 @@ export default function RecordScreen() {
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const elapsedRef = useRef(0);
+  const etaTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Chunked recording refs
   const nativeChunksRef = useRef<string[]>([]);   // URIs of completed chunks
@@ -157,7 +161,40 @@ export default function RecordScreen() {
     }
   };
 
-  useEffect(() => () => { stopTimer(); stopChunkInterval(); }, []);
+  const startEtaCountdown = (etaSecs: number) => {
+    setProcessingEtaSecs(etaSecs);
+    let remaining = etaSecs;
+    if (etaTimerRef.current) clearInterval(etaTimerRef.current);
+    etaTimerRef.current = setInterval(() => {
+      remaining -= 1;
+      setProcessingEtaSecs(Math.max(0, remaining));
+    }, 1000);
+  };
+
+  const stopEtaCountdown = () => {
+    if (etaTimerRef.current) {
+      clearInterval(etaTimerRef.current);
+      etaTimerRef.current = null;
+    }
+    setProcessingEtaSecs(-1);
+  };
+
+  const toggleActionItems = () => {
+    setWantActionItems(prev => {
+      const next = !prev;
+      AsyncStorage.setItem(ACTION_ITEMS_KEY, String(next));
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      return next;
+    });
+  };
+
+  useEffect(() => () => { stopTimer(); stopChunkInterval(); stopEtaCountdown(); }, []);
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    AsyncStorage.getItem(ACTION_ITEMS_KEY).then(val => {
+      if (val !== null) setWantActionItems(val === "true");
+    });
+  }, []);
   useEffect(() => {
     if (Platform.OS === "web") return;
     async function setupAudioMode() {
@@ -297,7 +334,13 @@ export default function RecordScreen() {
       if (!val) return;
       try {
         const pending = JSON.parse(val);
-        const info = await FileSystem.getInfoAsync(pending.uri);
+        // Support both new { uris: [] } and legacy { uri: "" } formats
+        const urisToCheck: string[] = pending.uris ?? (pending.uri ? [pending.uri] : []);
+        if (urisToCheck.length === 0) {
+          await AsyncStorage.removeItem(PENDING_KEY);
+          return;
+        }
+        const info = await FileSystem.getInfoAsync(urisToCheck[0]);
         if (!info.exists) {
           await AsyncStorage.removeItem(PENDING_KEY);
           return;
@@ -311,7 +354,9 @@ export default function RecordScreen() {
               style: "destructive",
               onPress: async () => {
                 await AsyncStorage.removeItem(PENDING_KEY);
-                await FileSystem.deleteAsync(pending.uri, { idempotent: true });
+                for (const u of urisToCheck) {
+                  try { await FileSystem.deleteAsync(u, { idempotent: true }); } catch {}
+                }
               },
             },
             { text: "Finish", onPress: () => retryPendingLecture(pending) },
@@ -361,7 +406,7 @@ export default function RecordScreen() {
   };
 
   // Analyze combined transcript text → structured notes
-  const analyzeTranscript = async (rawTranscript: string, lang: string, baseUrl: string) => {
+  const analyzeTranscript = async (rawTranscript: string, lang: string, baseUrl: string, includeActionItems = true) => {
     setStatusMsg("Generating notes...");
     let resp: Response;
     try {
@@ -370,7 +415,7 @@ export default function RecordScreen() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ rawTranscript, language: lang }),
+          body: JSON.stringify({ rawTranscript, language: lang, includeActionItems }),
         },
         ANALYZE_TIMEOUT_MS
       );
@@ -398,6 +443,9 @@ export default function RecordScreen() {
       setStatusMsg("Resuming previous lecture...");
       await activateKeepAwakeAsync();
 
+      const etaSecs = Math.max(30, Math.ceil(pending.duration / 15)) + 25;
+      startEtaCountdown(etaSecs);
+
       const uris = pending.uris ?? (pending.uri ? [pending.uri] : []);
       const baseUrl = getApiUrl();
 
@@ -407,7 +455,7 @@ export default function RecordScreen() {
         transcripts.push(t);
       }
       const rawTranscript = transcripts.join("\n\n");
-      const data = await analyzeTranscript(rawTranscript, pending.language, baseUrl);
+      const data = await analyzeTranscript(rawTranscript, pending.language, baseUrl, true);
 
       const newRecording = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -436,6 +484,7 @@ export default function RecordScreen() {
       setStatusMsg("");
       Alert.alert("Error", "Could not finish the lecture: " + (e?.message || String(e)));
     } finally {
+      stopEtaCountdown();
       await deactivateKeepAwake();
     }
   };
@@ -565,6 +614,10 @@ const stopNativeRecording = async (): Promise<{ base64: string; filename: string
       const recordedAt = new Date().toISOString();
       const recordedDuration = elapsedRef.current;
       const baseUrl = getApiUrl();
+      const includeAI = wantActionItems;
+
+      const etaSecs = Math.max(30, Math.ceil(recordedDuration / 15)) + 25;
+      startEtaCountdown(etaSecs);
 
       if (Platform.OS === "web") {
         // Web: single-shot (no chunking)
@@ -578,7 +631,7 @@ const stopNativeRecording = async (): Promise<{ base64: string; filename: string
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ audio: result.base64, filename: result.filename, language: language.code }),
+              body: JSON.stringify({ audio: result.base64, filename: result.filename, language: language.code, includeActionItems: includeAI }),
             },
             TRANSCRIBE_CHUNK_TIMEOUT_MS
           );
@@ -637,7 +690,7 @@ const stopNativeRecording = async (): Promise<{ base64: string; filename: string
       const rawTranscript = transcripts.join("\n\n");
 
       // Run one GPT-4o analysis pass on the full combined transcript
-      const data = await analyzeTranscript(rawTranscript, language.code, baseUrl);
+      const data = await analyzeTranscript(rawTranscript, language.code, baseUrl, includeAI);
 
       const newRecording = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -673,6 +726,7 @@ const stopNativeRecording = async (): Promise<{ base64: string; filename: string
       setStatusMsg("");
       Alert.alert("Error", e?.message || "Could not process lecture. Please try again.");
     } finally {
+      stopEtaCountdown();
       await deactivateKeepAwake();
     }
   };
@@ -796,13 +850,42 @@ const stopNativeRecording = async (): Promise<{ base64: string; filename: string
             {isProcessing && (
               <Animated.View entering={FadeIn} exiting={FadeOut} style={[styles.processingCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
                 <Ionicons name="sparkles" size={18} color={Colors.mint} />
-                <Text style={[styles.processingText, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
-                  {statusMsg}
-                </Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.processingText, { color: theme.textSecondary, fontFamily: "DMSans_400Regular" }]}>
+                    {statusMsg}
+                  </Text>
+                  {processingEtaSecs > 0 && (
+                    <Text style={[styles.processingEta, { color: theme.textTertiary, fontFamily: "DMSans_400Regular" }]}>
+                      {processingEtaSecs >= 60
+                        ? `~${Math.ceil(processingEtaSecs / 60)} min remaining`
+                        : `~${processingEtaSecs} sec remaining`}
+                    </Text>
+                  )}
+                  {processingEtaSecs === 0 && (
+                    <Text style={[styles.processingEta, { color: Colors.mint, fontFamily: "DMSans_500Medium" }]}>
+                      Almost done...
+                    </Text>
+                  )}
+                </View>
               </Animated.View>
             )}
           </View>
         </View>
+
+        {/* Action items toggle — shown when not processing */}
+        {!isProcessing && (
+          <Animated.View entering={FadeIn.delay(100)} exiting={FadeOut} style={[styles.toggleRow, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <View style={styles.toggleLeft}>
+              <Ionicons name="checkmark-circle-outline" size={18} color={Colors.mint} />
+              <Text style={[styles.toggleLabel, { color: theme.text, fontFamily: "DMSans_500Medium" }]}>
+                Action Items
+              </Text>
+            </View>
+            <Pressable onPress={toggleActionItems} style={[styles.togglePill, { backgroundColor: wantActionItems ? Colors.mint : theme.border }]}>
+              <View style={[styles.toggleThumb, { transform: [{ translateX: wantActionItems ? 18 : 2 }] }]} />
+            </Pressable>
+          </Animated.View>
+        )}
 
         {/* Feature list — only in idle state */}
         {isIdle && (
@@ -950,7 +1033,44 @@ const styles = StyleSheet.create({
   },
   processingText: {
     fontSize: 14,
-    flex: 1,
+  },
+  processingEta: {
+    fontSize: 12,
+    marginTop: 3,
+  },
+  toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    width: "100%",
+  },
+  toggleLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  toggleLabel: {
+    fontSize: 15,
+  },
+  togglePill: {
+    width: 42,
+    height: 26,
+    borderRadius: 13,
+    justifyContent: "center",
+  },
+  toggleThumb: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
   },
   featureList: {
     width: "100%",

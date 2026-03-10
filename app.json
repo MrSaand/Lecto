@@ -20,7 +20,8 @@
         "NSMicrophoneUsageDescription": "Lecto needs microphone access to record your meetings and lectures.",
         "UIBackgroundModes": [
           "audio",
-          "audio"
+          "fetch",
+          "processing"
         ],
         "ITSAppUsesNonExemptEncryption": false
       }
