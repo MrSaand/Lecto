@@ -32,11 +32,32 @@ import Animated, {
   FadeOut,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import { useAudioRecorder, RecordingPresets, setAudioModeAsync, AudioModule } from "expo-audio";
+import { useAudioRecorder, setAudioModeAsync, AudioModule, IOSOutputFormat, AudioQuality, type RecordingOptions } from "expo-audio";
 import { router } from "expo-router";
 
 const PENDING_KEY = "@lecto_pending_lecture";
-const TRANSCRIBE_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
+const TRANSCRIBE_CHUNK_TIMEOUT_MS = 4 * 60 * 1000;  // 4 min per chunk
+const ANALYZE_TIMEOUT_MS = 3 * 60 * 1000;            // 3 min for GPT-4o analysis
+const CHUNK_INTERVAL_MS = 90 * 60 * 1000;            // auto-chunk every 90 minutes
+const MAX_DURATION_S = 6 * 60 * 60;                  // hard stop at 6 hours
+
+// Speech-optimized recording: 32 kbps, 16 kHz, mono — 4× smaller than HIGH_QUALITY
+// Whisper resamples to 16 kHz internally anyway; accuracy is identical
+const SPEECH_RECORDING_OPTIONS: RecordingOptions = {
+  extension: ".m4a",
+  sampleRate: 16000,
+  numberOfChannels: 1,
+  bitRate: 32000,
+  android: { outputFormat: "mpeg4", audioEncoder: "aac" },
+  ios: {
+    outputFormat: IOSOutputFormat.MPEG4AAC,
+    audioQuality: AudioQuality.MEDIUM,
+    linearPCMBitDepth: 16,
+    linearPCMIsBigEndian: false,
+    linearPCMIsFloat: false,
+  },
+  web: { mimeType: "audio/webm", bitsPerSecond: 32000 },
+};
 
 function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
   const controller = new AbortController();
@@ -82,7 +103,7 @@ export default function RecordScreen() {
   const isDark = colorScheme === "dark";
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
-  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorder = useAudioRecorder(SPEECH_RECORDING_OPTIONS);
   const { addRecording, recordings } = useRecordings();
   const { language } = useSettings();
   const { isSubscribed } = useSubscription();
@@ -92,7 +113,6 @@ export default function RecordScreen() {
   const [elapsed, setElapsed] = useState(0);
   const [statusMsg, setStatusMsg] = useState("");
 
-  // Native recording ref
   // Web recording refs
   const mediaRecorderRef = useRef<any>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -100,7 +120,19 @@ export default function RecordScreen() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const elapsedRef = useRef(0);
 
+  // Chunked recording refs
+  const nativeChunksRef = useRef<string[]>([]);   // URIs of completed chunks
+  const chunkIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isChunkingRef = useRef(false);             // prevent overlapping auto-chunks
+
   const buttonScale = useSharedValue(1);
+
+  const stopChunkInterval = () => {
+    if (chunkIntervalRef.current) {
+      clearInterval(chunkIntervalRef.current);
+      chunkIntervalRef.current = null;
+    }
+  };
 
   const startTimer = () => {
     if (timerRef.current) {
@@ -110,6 +142,11 @@ export default function RecordScreen() {
     timerRef.current = setInterval(() => {
       elapsedRef.current += 1;
       setElapsed(elapsedRef.current);
+      if (elapsedRef.current >= MAX_DURATION_S) {
+        stopTimer();
+        stopChunkInterval();
+        stopAndProcess();
+      }
     }, 1000);
   };
 
@@ -120,7 +157,7 @@ export default function RecordScreen() {
     }
   };
 
-  useEffect(() => () => stopTimer(), []);
+  useEffect(() => () => { stopTimer(); stopChunkInterval(); }, []);
   useEffect(() => {
     if (Platform.OS === "web") return;
     async function setupAudioMode() {
@@ -288,8 +325,70 @@ export default function RecordScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Transcribe a single chunk, return raw transcript text
+  const transcribeChunk = async (
+    uri: string,
+    index: number,
+    total: number,
+    lang: string,
+    baseUrl: string
+  ): Promise<string> => {
+    setStatusMsg(`Transcribing part ${index + 1} of ${total}...`);
+    const base64 = await FileSystem.readAsStringAsync(uri, { encoding: "base64" });
+    const filename = uri.split("/").pop() || "recording.m4a";
+    let resp: Response;
+    try {
+      resp = await fetchWithTimeout(
+        `${baseUrl}api/transcribe-chunk`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ audio: base64, filename, language: lang }),
+        },
+        TRANSCRIBE_CHUNK_TIMEOUT_MS
+      );
+    } catch (e: any) {
+      if (e?.name === "AbortError") throw new Error(`Part ${index + 1} timed out. Please retry.`);
+      throw new Error("Could not reach the server. Check your connection.");
+    }
+    if (!resp.ok) {
+      let msg = "Transcription failed";
+      try { msg = (await resp.json()).error || msg; } catch {}
+      throw new Error(msg);
+    }
+    const data = await resp.json();
+    return data.rawTranscript || "";
+  };
+
+  // Analyze combined transcript text → structured notes
+  const analyzeTranscript = async (rawTranscript: string, lang: string, baseUrl: string) => {
+    setStatusMsg("Generating notes...");
+    let resp: Response;
+    try {
+      resp = await fetchWithTimeout(
+        `${baseUrl}api/analyze`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rawTranscript, language: lang }),
+        },
+        ANALYZE_TIMEOUT_MS
+      );
+    } catch (e: any) {
+      if (e?.name === "AbortError") throw new Error("Analysis timed out. Please retry.");
+      throw new Error("Could not reach the server. Check your connection.");
+    }
+    if (!resp.ok) {
+      let msg = "Analysis failed";
+      try { msg = (await resp.json()).error || msg; } catch {}
+      throw new Error(msg);
+    }
+    return resp.json();
+  };
+
   const retryPendingLecture = async (pending: {
-    uri: string;
+    uris?: string[];
+    uri?: string;          // legacy single-file format
     duration: number;
     date: string;
     language: string;
@@ -299,40 +398,16 @@ export default function RecordScreen() {
       setStatusMsg("Resuming previous lecture...");
       await activateKeepAwakeAsync();
 
-      const base64 = await FileSystem.readAsStringAsync(pending.uri, {
-        encoding: "base64",
-      });
-      const filename = pending.uri.split("/").pop() || "recording.m4a";
-
-      setStatusMsg("Transcribing with AI...");
+      const uris = pending.uris ?? (pending.uri ? [pending.uri] : []);
       const baseUrl = getApiUrl();
-      let response: Response;
-      try {
-        response = await fetchWithTimeout(
-          `${baseUrl}api/transcribe`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ audio: base64, filename, language: pending.language }),
-          },
-          TRANSCRIBE_TIMEOUT_MS
-        );
-      } catch (e: any) {
-        if (e?.name === "AbortError") throw new Error("Processing timed out. You can retry by reopening the app.");
-        throw new Error("Could not reach the server. Please check your internet connection and try again.");
-      }
 
-      if (!response.ok) {
-        let errMsg = "Transcription failed";
-        try {
-          const err = await response.json();
-          errMsg = err.error || errMsg;
-        } catch {}
-        throw new Error(errMsg);
+      const transcripts: string[] = [];
+      for (let i = 0; i < uris.length; i++) {
+        const t = await transcribeChunk(uris[i], i, uris.length, pending.language, baseUrl);
+        transcripts.push(t);
       }
-
-      setStatusMsg("Generating notes...");
-      const data = await response.json();
+      const rawTranscript = transcripts.join("\n\n");
+      const data = await analyzeTranscript(rawTranscript, pending.language, baseUrl);
 
       const newRecording = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -343,14 +418,16 @@ export default function RecordScreen() {
         actionItems: data.actionItems || [],
         speakers: data.speakers || ["Speaker 1"],
         transcript: data.transcript || [],
-        rawTranscript: data.rawTranscript || "",
+        rawTranscript,
         keyTopics: data.keyTopics || [],
         folderId: null,
       };
 
       await addRecording(newRecording);
       await AsyncStorage.removeItem(PENDING_KEY);
-      await FileSystem.deleteAsync(pending.uri, { idempotent: true });
+      for (const u of uris) {
+        try { await FileSystem.deleteAsync(u, { idempotent: true }); } catch {}
+      }
       setRecordState("idle");
       setStatusMsg("");
       router.push({ pathname: "/detail/[id]", params: { id: newRecording.id } });
@@ -363,7 +440,26 @@ export default function RecordScreen() {
     }
   };
 
-  // ─── Native recording via expo-av ──────────────────────────────────────────
+  // ─── Native recording via expo-audio ───────────────────────────────────────
+
+  // Called automatically every CHUNK_INTERVAL_MS to save current chunk and seamlessly restart
+  const autoChunkNative = async () => {
+    if (isChunkingRef.current) return;
+    isChunkingRef.current = true;
+    try {
+      await recorder.stop();
+      const uri = recorder.uri;
+      if (uri) nativeChunksRef.current.push(uri);
+      // Seamlessly start the next chunk
+      await recorder.prepareToRecordAsync();
+      recorder.record();
+    } catch (e) {
+      console.warn("Auto-chunk failed:", e);
+    } finally {
+      isChunkingRef.current = false;
+    }
+  };
+
   const startNativeRecording = async () => {
     try {
       const permission = await AudioModule.requestRecordingPermissionsAsync();
@@ -384,6 +480,11 @@ export default function RecordScreen() {
         playsInSilentMode: true,
       });
 
+      // Reset chunk state for fresh recording
+      nativeChunksRef.current = [];
+      isChunkingRef.current = false;
+      stopChunkInterval();
+
       // Prepare and start the background-safe recording
       await recorder.prepareToRecordAsync();
       recorder.record();
@@ -392,6 +493,10 @@ export default function RecordScreen() {
       setElapsed(0);
       setRecordState("recording");
       startTimer();
+
+      // Start auto-chunking every 90 minutes
+      chunkIntervalRef.current = setInterval(autoChunkNative, CHUNK_INTERVAL_MS);
+
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch (e: any) {
       setRecordState("idle");
@@ -402,6 +507,7 @@ export default function RecordScreen() {
   const pauseNativeRecording = async () => {
     try {
       recorder.pause();
+      stopChunkInterval();
       setRecordState("paused");
       stopTimer();
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -415,6 +521,9 @@ export default function RecordScreen() {
       recorder.record();
       setRecordState("recording");
       startTimer();
+      // Resume chunk interval from remaining time (restart interval for simplicity)
+      stopChunkInterval();
+      chunkIntervalRef.current = setInterval(autoChunkNative, CHUNK_INTERVAL_MS);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch (e: any) {
       Alert.alert("Error", "Could not resume recording: " + (e?.message || String(e)));
@@ -449,66 +558,86 @@ const stopNativeRecording = async (): Promise<{ base64: string; filename: string
     try {
       setRecordState("processing");
       stopTimer();
+      stopChunkInterval();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await activateKeepAwakeAsync();
 
-      let base64: string;
-      let filename: string;
-      let nativeUri: string | null = null;
       const recordedAt = new Date().toISOString();
       const recordedDuration = elapsedRef.current;
+      const baseUrl = getApiUrl();
 
       if (Platform.OS === "web") {
+        // Web: single-shot (no chunking)
         setStatusMsg("Stopping lecture...");
         const result = await stopWebRecording();
-        base64 = result.base64;
-        filename = result.filename;
-      } else {
-        setStatusMsg("Stopping lecture...");
-        const result = await stopNativeRecording();
-        base64 = result.base64;
-        filename = result.filename;
-        nativeUri = result.uri;
-        // Save to AsyncStorage BEFORE the network call so we can recover if interrupted
-        await AsyncStorage.setItem(PENDING_KEY, JSON.stringify({
-          uri: result.uri,
-          duration: recordedDuration,
-          date: recordedAt,
-          language: language.code,
-        }));
-      }
-
-      setStatusMsg("Transcribing with AI...");
-      const baseUrl = getApiUrl();
-      let transcribeResponse: Response;
-      try {
-        transcribeResponse = await fetchWithTimeout(
-          `${baseUrl}api/transcribe`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ audio: base64, filename, language: language.code }),
-          },
-          TRANSCRIBE_TIMEOUT_MS
-        );
-      } catch (e: any) {
-        if (e?.name === "AbortError") {
-          throw new Error("Processing timed out. Your recording is saved — open the app again to retry.");
-        }
-        throw new Error("Could not reach the server. Please check your internet connection and try again. Your recording is saved.");
-      }
-
-      if (!transcribeResponse.ok) {
-        let errMsg = "Transcription failed";
+        setStatusMsg("Transcribing with AI...");
+        let resp: Response;
         try {
-          const err = await transcribeResponse.json();
-          errMsg = err.error || errMsg;
-        } catch {}
-        throw new Error(errMsg);
+          resp = await fetchWithTimeout(
+            `${baseUrl}api/transcribe`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ audio: result.base64, filename: result.filename, language: language.code }),
+            },
+            TRANSCRIBE_CHUNK_TIMEOUT_MS
+          );
+        } catch (e: any) {
+          if (e?.name === "AbortError") throw new Error("Processing timed out. Please try again.");
+          throw new Error("Could not reach the server. Please check your connection.");
+        }
+        if (!resp.ok) {
+          let msg = "Transcription failed";
+          try { msg = (await resp.json()).error || msg; } catch {}
+          throw new Error(msg);
+        }
+        const data = await resp.json();
+        const newRecording = {
+          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          title: data.title || "Untitled Lecture",
+          date: recordedAt,
+          duration: recordedDuration,
+          summary: data.summary || [],
+          actionItems: data.actionItems || [],
+          speakers: data.speakers || ["Speaker 1"],
+          transcript: data.transcript || [],
+          rawTranscript: data.rawTranscript || "",
+          keyTopics: data.keyTopics || [],
+          folderId: null,
+        };
+        await addRecording(newRecording);
+        setRecordState("idle");
+        setElapsed(0);
+        elapsedRef.current = 0;
+        setStatusMsg("");
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        router.push({ pathname: "/detail/[id]", params: { id: newRecording.id } });
+        return;
       }
 
-      setStatusMsg("Generating notes...");
-      const data = await transcribeResponse.json();
+      // ── Native: chunked flow ───────────────────────────────────────────────
+      setStatusMsg("Saving lecture...");
+      const finalResult = await stopNativeRecording();
+      const allUris = [...nativeChunksRef.current, finalResult.uri];
+
+      // Persist all chunk URIs so we can recover if the app is killed mid-processing
+      await AsyncStorage.setItem(PENDING_KEY, JSON.stringify({
+        uris: allUris,
+        duration: recordedDuration,
+        date: recordedAt,
+        language: language.code,
+      }));
+
+      // Transcribe each chunk sequentially
+      const transcripts: string[] = [];
+      for (let i = 0; i < allUris.length; i++) {
+        const t = await transcribeChunk(allUris[i], i, allUris.length, language.code, baseUrl);
+        transcripts.push(t);
+      }
+      const rawTranscript = transcripts.join("\n\n");
+
+      // Run one GPT-4o analysis pass on the full combined transcript
+      const data = await analyzeTranscript(rawTranscript, language.code, baseUrl);
 
       const newRecording = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -519,16 +648,17 @@ const stopNativeRecording = async (): Promise<{ base64: string; filename: string
         actionItems: data.actionItems || [],
         speakers: data.speakers || ["Speaker 1"],
         transcript: data.transcript || [],
-        rawTranscript: data.rawTranscript || "",
+        rawTranscript,
         keyTopics: data.keyTopics || [],
         folderId: null,
       };
 
       await addRecording(newRecording);
       await AsyncStorage.removeItem(PENDING_KEY);
-      if (nativeUri) {
-        try { await FileSystem.deleteAsync(nativeUri, { idempotent: true }); } catch {}
+      for (const u of allUris) {
+        try { await FileSystem.deleteAsync(u, { idempotent: true }); } catch {}
       }
+      nativeChunksRef.current = [];
       setRecordState("idle");
       setElapsed(0);
       elapsedRef.current = 0;

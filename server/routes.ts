@@ -107,6 +107,98 @@ Return ONLY valid JSON with no markdown or code fences.`;
     }
   });
 
+  // Transcribe a single audio chunk → returns only rawTranscript (no GPT-4o analysis)
+  // Used for long recordings split into ≤90-min segments
+  app.post("/api/transcribe-chunk", async (req, res) => {
+    try {
+      const { audio, filename = "recording.m4a", language = "en" } = req.body;
+      if (!audio) return res.status(400).json({ error: "Audio data required" });
+
+      const audioBuffer = Buffer.from(audio, "base64");
+      const ext = filename.split(".").pop()?.toLowerCase() || "m4a";
+      const mimeMap: Record<string, string> = {
+        m4a: "audio/m4a", mp4: "audio/mp4", webm: "audio/webm",
+        wav: "audio/wav", mp3: "audio/mpeg", caf: "audio/x-caf", ogg: "audio/ogg",
+      };
+      const mimeType = mimeMap[ext] || "audio/m4a";
+      const file = await toFile(audioBuffer, `audio.${ext}`, { type: mimeType });
+
+      const transcriptionResponse = await getOpenAI().audio.transcriptions.create({
+        file,
+        model: "whisper-1",
+        ...(language !== "en" ? { language } : {}),
+      });
+
+      res.json({ rawTranscript: transcriptionResponse.text });
+    } catch (error: any) {
+      console.error("Chunk transcription error:", error);
+      res.status(500).json({ error: error.message || "Transcription failed" });
+    }
+  });
+
+  // Analyze a combined raw transcript → returns structured notes (title, summary, etc.)
+  // Called once after all chunks have been transcribed and joined
+  app.post("/api/analyze", express.json({ limit: "2mb" }), async (req, res) => {
+    try {
+      const { rawTranscript, language = "en" } = req.body;
+      if (!rawTranscript) return res.status(400).json({ error: "rawTranscript is required" });
+
+      const langName = LANGUAGE_NAMES[language] || "English";
+
+      const systemPrompt = `You are an expert meeting and lecture notes assistant.
+CRITICAL: You MUST write ALL output text in ${langName}. Every field — title, summary bullets, action items, speaker names, transcript text, and key topics — must be written in ${langName}. Do not use any other language.
+
+Analyze the provided transcript and return a JSON object with EXACTLY this structure:
+{
+  "title": "A concise, descriptive title in ${langName} (max 60 chars)",
+  "summary": ["bullet point in ${langName}", "bullet point in ${langName}", ...],
+  "actionItems": [
+    { "speaker": "Speaker label in ${langName}", "task": "action item in ${langName}" },
+    ...
+  ],
+  "speakers": ["Speaker 1", "Speaker 2", ...],
+  "transcript": [
+    { "speaker": "Speaker 1", "timestamp": "0:00", "text": "transcript text in ${langName}" },
+    ...
+  ],
+  "keyTopics": ["topic in ${langName}", ...]
+}
+
+Speaker assignment rules: assign labels based on changes in speaking style or role. If one speaker, use "Speaker 1". For Q&A, use "Speaker 1" and "Speaker 2". Distribute timestamps evenly across the full duration.
+Action items: extract concrete next steps with the most likely responsible speaker.
+Return ONLY valid JSON with no markdown or code fences.`;
+
+      const analysisResponse = await getOpenAI().chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Transcript:\n${rawTranscript}` },
+        ],
+        max_tokens: 4096,
+      });
+
+      const content = analysisResponse.choices[0]?.message?.content || "{}";
+      let parsed: any = {};
+      try {
+        parsed = JSON.parse(content);
+      } catch {
+        parsed = {
+          title: "Lecture",
+          summary: [rawTranscript.slice(0, 200)],
+          actionItems: [],
+          speakers: ["Speaker 1"],
+          transcript: [{ speaker: "Speaker 1", timestamp: "0:00", text: rawTranscript }],
+          keyTopics: [],
+        };
+      }
+
+      res.json(parsed);
+    } catch (error: any) {
+      console.error("Analysis error:", error);
+      res.status(500).json({ error: error.message || "Analysis failed" });
+    }
+  });
+
   app.post("/api/chat", express.json({ limit: "1mb" }), async (req, res) => {
     try {
       const { messages, context, language = "en" } = req.body;
