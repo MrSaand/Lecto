@@ -220,7 +220,7 @@ function MoveModeBanner({
   onCancel: () => void;
 }) {
   return (
-    <Animated.View entering={FadeInUp.springify().damping(18)} style={[styles.moveBanner, { backgroundColor: Colors.indigo, shadowColor: Colors.indigo }]}>
+    <Animated.View entering={FadeInUp.duration(280).easing(Easing.out(Easing.cubic))} style={[styles.moveBanner, { backgroundColor: Colors.indigo, shadowColor: Colors.indigo }]}>
       <View style={styles.moveBannerLeft}>
         <Ionicons name={item.type === "folder" ? "folder" : "radio"} size={16} color="rgba(255,255,255,0.8)" />
         <View>
@@ -267,7 +267,7 @@ function CreateFolderModal({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel} statusBarTranslucent>
-      <KeyboardAvoidingView style={styles.modalBackdrop} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <KeyboardAvoidingView style={[styles.modalBackdrop, { backgroundColor: "rgba(0,0,0,0.5)" }]} behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <Pressable style={{ flex: 1 }} onPress={onCancel} />
         <View style={[styles.modalSheet, { backgroundColor: theme.card }]}>
           <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
@@ -565,7 +565,7 @@ function SettingsModal({ visible, onClose, onPaywall, theme }: {
     onClose();
   };
 
-  const handleClose = () => {
+  const handleClose = (afterClose?: () => void) => {
     if (isSettingsClosingRef.current) return;
     isSettingsClosingRef.current = true;
     Keyboard.dismiss();
@@ -575,6 +575,7 @@ function SettingsModal({ visible, onClose, onPaywall, theme }: {
         settingsSheetY.value = 600;
         settingsBackdropAlpha.value = 0;
         runOnJS(resetAndCloseSettings)();
+        if (afterClose) runOnJS(afterClose)();
       }
     });
   };
@@ -618,7 +619,7 @@ function SettingsModal({ visible, onClose, onPaywall, theme }: {
                 </View>
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
                   <Pressable
-                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); if (!isSubscribed) { handleClose(); onPaywall(); } }}
+                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); if (!isSubscribed) { handleClose(onPaywall); } }}
                     style={({ pressed }) => [styles.subscriptionRow, { backgroundColor: isSubscribed ? Colors.indigo + "0F" : Colors.coral + "0F", borderColor: isSubscribed ? Colors.indigo + "30" : Colors.coral + "30", opacity: pressed ? 0.8 : 1 }]}
                   >
                     <View style={[styles.subIcon, { backgroundColor: isSubscribed ? Colors.indigo : Colors.coral }]}>

@@ -951,7 +951,7 @@ const styles = StyleSheet.create({
 
   // Rename modal
   renameBackdrop: { flex: 1 },
-  renameSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.12, shadowRadius: 20, elevation: 20 },
+  renameSheet: { borderRadius: 24, marginHorizontal: 8, marginBottom: 12, shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.12, shadowRadius: 20, elevation: 20 },
   renameHandle: { alignItems: "center", paddingTop: 12, paddingBottom: 4 },
   renameHandleBar: { width: 36, height: 4, borderRadius: 2 },
   renameHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 16 },

@@ -27,7 +27,7 @@ const FEATURES = [
   { icon: "language-outline" as const, label: "Multi-language support" },
 ];
 
-type StatusType = "success" | "cancelled" | "error" | "";
+type StatusType = "success" | "cancelled" | "error" | "nopkg" | "";
 
 interface PaywallProps {
   visible: boolean;
@@ -73,7 +73,7 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
 
       const pkg = selectedPlan === "monthly" ? resolvedMonthly : resolvedYearly;
       if (!pkg) {
-        setStatus("error");
+        setStatus("nopkg");
         return;
       }
 
@@ -120,14 +120,15 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
   const statusText = () => {
     if (status === "success") return "Subscription activated!";
     if (status === "cancelled") return wasRestoreAttempt ? "No previous purchases found." : "Purchase cancelled.";
-    if (status === "error") return "Purchase unavailable. Try a promo code or restore purchases.";
+    if (status === "nopkg") return "Could not load subscription plans. Check your connection and try again.";
+    if (status === "error") return "Purchase failed. Make sure you are signed into your Apple ID and try again.";
     return "";
   };
 
   const statusColor = () => {
     if (status === "success") return Colors.mint;
     if (status === "cancelled") return theme.textSecondary;
-    if (status === "error") return Colors.coral;
+    if (status === "nopkg" || status === "error") return Colors.coral;
     return theme.textSecondary;
   };
 
