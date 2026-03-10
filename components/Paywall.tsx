@@ -61,11 +61,13 @@ export default function Paywall({ visible, onClose, fromLimit = false }: Paywall
   }, [visible]);
 
   useEffect(() => {
+    let active = true;
     if (visible && !isWeb && !hasRefreshedRef.current) {
       hasRefreshedRef.current = true;
       setIsRefreshing(true);
-      refresh().finally(() => setIsRefreshing(false));
+      refresh().finally(() => { if (active) setIsRefreshing(false); });
     }
+    return () => { active = false; };
   }, [visible]);
 
   const monthlyPrice = monthlyPackage?.product.priceString ?? "$9.99";

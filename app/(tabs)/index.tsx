@@ -257,6 +257,33 @@ function CreateFolderModal({
 }) {
   const [name, setName] = useState("");
   const inputRef = useRef<TextInput>(null);
+  const backdropAlpha = useSharedValue(0);
+  const sheetY = useSharedValue(400);
+  const isClosingRef = React.useRef(false);
+  const animatedBackdrop = useAnimatedStyle(() => ({ opacity: backdropAlpha.value }));
+  const animatedSheet = useAnimatedStyle(() => ({ transform: [{ translateY: sheetY.value }] }));
+
+  React.useEffect(() => {
+    if (visible) {
+      isClosingRef.current = false;
+      backdropAlpha.value = withTiming(1, { duration: 220 });
+      sheetY.value = withTiming(0, { duration: 280, easing: Easing.out(Easing.cubic) });
+    }
+  }, [visible]);
+
+  const handleClose = () => {
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
+    Keyboard.dismiss();
+    backdropAlpha.value = withTiming(0, { duration: 180 });
+    sheetY.value = withTiming(400, { duration: 220 }, (done) => {
+      if (done) {
+        sheetY.value = 400;
+        backdropAlpha.value = 0;
+        runOnJS(onCancel)();
+      }
+    });
+  };
 
   const handleCreate = () => {
     const trimmed = name.trim();
@@ -266,14 +293,15 @@ function CreateFolderModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel} statusBarTranslucent>
-      <KeyboardAvoidingView style={[styles.modalBackdrop, { backgroundColor: "rgba(0,0,0,0.5)" }]} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-        <Pressable style={{ flex: 1 }} onPress={onCancel} />
-        <View style={[styles.modalSheet, { backgroundColor: theme.card }]}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose} statusBarTranslucent>
+      <KeyboardAvoidingView style={styles.modalBackdrop} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+        <Animated.View style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(0,0,0,0.5)" }, animatedBackdrop]} pointerEvents="none" />
+        <Pressable style={{ flex: 1 }} onPress={handleClose} />
+        <Animated.View style={[styles.modalSheet, { backgroundColor: theme.card }, animatedSheet]}>
           <View style={styles.sheetHandle}><View style={[styles.handleBar, { backgroundColor: theme.border }]} /></View>
           <View style={styles.sheetHeader}>
             <Text style={[styles.sheetTitle, { color: theme.text, fontFamily: "DMSans_700Bold" }]}>New Folder</Text>
-            <Pressable onPress={onCancel} style={styles.sheetClose}>
+            <Pressable onPress={handleClose} style={styles.sheetClose}>
               <Ionicons name="close" size={22} color={theme.textSecondary} />
             </Pressable>
           </View>
@@ -299,7 +327,7 @@ function CreateFolderModal({
               </Text>
             </Pressable>
           </View>
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -531,6 +559,7 @@ function SettingsModal({ visible, onClose, onPaywall, theme }: {
   const [promoStatus, setPromoStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [promoLoading, setPromoLoading] = useState(false);
   const recordingCount = allRecordings.length;
+  const pendingPaywallRef = React.useRef(false);
 
   const settingsOpacity = useSharedValue(1);
   const animatedSettingsStyle = useAnimatedStyle(() => ({ opacity: settingsOpacity.value }));
@@ -563,9 +592,13 @@ function SettingsModal({ visible, onClose, onPaywall, theme }: {
     setPromoStatus(null);
     settingsOpacity.value = 1;
     onClose();
+    if (pendingPaywallRef.current) {
+      pendingPaywallRef.current = false;
+      setTimeout(onPaywall, 80);
+    }
   };
 
-  const handleClose = (afterClose?: () => void) => {
+  const handleClose = () => {
     if (isSettingsClosingRef.current) return;
     isSettingsClosingRef.current = true;
     Keyboard.dismiss();
@@ -575,10 +608,6 @@ function SettingsModal({ visible, onClose, onPaywall, theme }: {
         settingsSheetY.value = 600;
         settingsBackdropAlpha.value = 0;
         runOnJS(resetAndCloseSettings)();
-        if (afterClose) {
-          const _cb = afterClose;
-          runOnJS(() => { setTimeout(_cb, 80); })();
-        }
       }
     });
   };
@@ -622,7 +651,7 @@ function SettingsModal({ visible, onClose, onPaywall, theme }: {
                 </View>
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
                   <Pressable
-                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); if (!isSubscribed) { handleClose(onPaywall); } }}
+                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); if (!isSubscribed) { pendingPaywallRef.current = true; handleClose(); } }}
                     style={({ pressed }) => [styles.subscriptionRow, { backgroundColor: isSubscribed ? Colors.indigo + "0F" : Colors.coral + "0F", borderColor: isSubscribed ? Colors.indigo + "30" : Colors.coral + "30", opacity: pressed ? 0.8 : 1 }]}
                   >
                     <View style={[styles.subIcon, { backgroundColor: isSubscribed ? Colors.indigo : Colors.coral }]}>
