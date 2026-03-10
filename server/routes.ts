@@ -72,12 +72,14 @@ Analyze the provided transcript and return a JSON object with EXACTLY this struc
   "keyTopics": ["topic in ${langName}", ...]
 }
 
-TRANSCRIPT RULES — do NOT reproduce speech verbatim:
-- Group the lecture into natural sections of 2–5 minutes each
-- Each "text" entry should be 2–4 sentences capturing the main content of that time period
-- Aim for 5–15 transcript entries total regardless of lecture length
-- Assign timestamps evenly across the full recording duration
-- Assign speaker labels based on changes in speaking role or style; single lecturer = "Speaker 1"
+TRANSCRIPT RULES — paraphrase each speaker turn, do NOT reproduce verbatim and do NOT summarize:
+- Create one entry per distinct speaker turn or natural conversational exchange
+- Each "text" is 1–2 sentences paraphrasing what that speaker said, in conversational language (not bullet points)
+- Show the actual back-and-forth rhythm — if two people alternate frequently, that should be reflected
+- For a single-speaker lecture: one entry per topic shift (roughly every 1–2 minutes)
+- Timestamps should reflect when each turn actually occurred
+- Assign speaker labels based on role or vocal changes; single lecturer = "Speaker 1"
+- The transcript should read like a dialogue/conversation, clearly different from the summary bullets
 
 KEY TOPICS: Include at most 5 of the most important topics.
 ${!includeActionItems ? 'ACTION ITEMS: Return an empty array [] for actionItems.' : 'ACTION ITEMS: Extract concrete next steps with the most likely responsible speaker.'}
@@ -171,12 +173,14 @@ Analyze the provided transcript and return a JSON object with EXACTLY this struc
   "keyTopics": ["topic in ${langName}", ...]
 }
 
-TRANSCRIPT RULES — do NOT reproduce speech verbatim:
-- Group the lecture into natural sections of 2–5 minutes each
-- Each "text" entry should be 2–4 sentences capturing the main content of that time period
-- Aim for 5–15 transcript entries total regardless of lecture length
-- Assign timestamps evenly across the full recording duration
-- Assign speaker labels based on changes in speaking role or style; single lecturer = "Speaker 1"
+TRANSCRIPT RULES — paraphrase each speaker turn, do NOT reproduce verbatim and do NOT summarize:
+- Create one entry per distinct speaker turn or natural conversational exchange
+- Each "text" is 1–2 sentences paraphrasing what that speaker said, in conversational language (not bullet points)
+- Show the actual back-and-forth rhythm — if two people alternate frequently, that should be reflected
+- For a single-speaker lecture: one entry per topic shift (roughly every 1–2 minutes)
+- Timestamps should reflect when each turn actually occurred
+- Assign speaker labels based on role or vocal changes; single lecturer = "Speaker 1"
+- The transcript should read like a dialogue/conversation, clearly different from the summary bullets
 
 KEY TOPICS: Include at most 5 of the most important topics.
 ${!includeActionItems ? 'ACTION ITEMS: Return an empty array [] for actionItems.' : 'ACTION ITEMS: Extract concrete next steps with the most likely responsible speaker.'}
