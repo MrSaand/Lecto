@@ -6,7 +6,7 @@ import express from "express";
 import { PROMO_CODES } from "./promo-codes";
 
 function getOpenAI(): OpenAI {
-  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY_LECTO || process.env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new Error("No OpenAI API key configured. Please set OPENAI_API_KEY in secrets.");
   }
