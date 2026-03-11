@@ -6,13 +6,14 @@ import express from "express";
 import { PROMO_CODES } from "./promo-codes";
 
 function getOpenAI(): OpenAI {
-  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    throw new Error("AI_INTEGRATIONS_OPENAI_API_KEY environment variable is not set");
+    throw new Error("No OpenAI API key configured. Please set OPENAI_API_KEY in secrets.");
   }
+  const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined;
   return new OpenAI({
     apiKey,
-    baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined,
+    ...(baseURL ? { baseURL } : {}),
     timeout: 120_000,
     maxRetries: 1,
   });
