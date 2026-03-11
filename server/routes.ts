@@ -1,22 +1,40 @@
 import type { Express } from "express";
 import { createServer, type Server } from "node:http";
-import OpenAI, { toFile } from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Buffer } from "node:buffer";
 import express from "express";
 import { PROMO_CODES } from "./promo-codes";
 
-function getOpenAI(): OpenAI {
-  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY_LECTO || process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error("No OpenAI API key configured. Please set OPENAI_API_KEY in secrets.");
-  }
-  const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined;
-  return new OpenAI({
-    apiKey,
-    ...(baseURL ? { baseURL } : {}),
-    timeout: 120_000,
-    maxRetries: 1,
+function getGemini() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY environment variable is not set.");
+  return new GoogleGenerativeAI(apiKey);
+}
+
+async function geminiGenerateContent(prompt: string, systemInstruction?: string): Promise<string> {
+  const genAI = getGemini();
+  const model = genAI.getGenerativeModel({
+    model: "gemini-2.0-flash",
+    ...(systemInstruction ? { systemInstruction } : {}),
   });
+  const result = await model.generateContent(prompt);
+  return result.response.text();
+}
+
+async function geminiTranscribeAudio(audioBase64: string, mimeType: string, language: string): Promise<string> {
+  const genAI = getGemini();
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const langHint = language !== "en" ? ` The audio is in ${LANGUAGE_NAMES[language] || language}.` : "";
+  const result = await model.generateContent([
+    {
+      inlineData: {
+        data: audioBase64,
+        mimeType,
+      },
+    },
+    `Please transcribe this audio recording accurately and completely. Output only the transcription text with no commentary, labels, or formatting.${langHint}`,
+  ]);
+  return result.response.text();
 }
 
 const LANGUAGE_NAMES: Record<string, string> = {
@@ -25,91 +43,68 @@ const LANGUAGE_NAMES: Record<string, string> = {
   hi: "Hindi", ar: "Arabic", ru: "Russian",
 };
 
+function cleanJson(text: string): string {
+  return text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+}
+
+function buildAnalysisPrompt(rawTranscript: string, langName: string, includeActionItems: boolean): string {
+  return `You are an expert meeting and lecture notes assistant.
+CRITICAL: You MUST write ALL output text in ${langName}. Every field must be in ${langName}.
+
+Analyze the transcript below and return a JSON object with EXACTLY this structure:
+{
+  "title": "A concise, descriptive title in ${langName} (max 60 chars)",
+  "summary": ["bullet point in ${langName}", ...],
+  "actionItems": [{ "speaker": "Speaker label", "task": "action item" }, ...],
+  "speakers": ["Speaker 1", ...],
+  "transcript": [{ "speaker": "Speaker 1", "timestamp": "0:00", "text": "paraphrased turn" }, ...],
+  "keyTopics": ["topic", ...]
+}
+
+TRANSCRIPT RULES — paraphrase each speaker turn, do NOT copy verbatim and do NOT summarize:
+- One entry per distinct speaker turn or topic shift
+- Each "text" is 1–2 sentences paraphrasing what was said, in conversational language
+- Show the back-and-forth rhythm if multiple speakers; single lecturer = one entry per topic shift (~1–2 min)
+- Timestamps reflect when each turn occurred
+- Single lecturer = "Speaker 1"
+- Must read like a conversation, clearly different from the summary bullets
+
+KEY TOPICS: At most 5 of the most important topics.
+${!includeActionItems ? "ACTION ITEMS: Return an empty array [] for actionItems." : "ACTION ITEMS: Extract concrete next steps with the most likely responsible speaker."}
+Return ONLY valid JSON with no markdown fences.
+
+Transcript:
+${rawTranscript}`;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/transcribe", async (req, res) => {
     try {
       const { audio, filename = "recording.m4a", language = "en", includeActionItems = true } = req.body;
-      if (!audio) {
-        return res.status(400).json({ error: "Audio data required" });
-      }
+      if (!audio) return res.status(400).json({ error: "Audio data required" });
 
       const langName = LANGUAGE_NAMES[language] || "English";
-      const audioBuffer = Buffer.from(audio, "base64");
       const ext = filename.split(".").pop()?.toLowerCase() || "m4a";
       const mimeMap: Record<string, string> = {
-        m4a: "audio/m4a", mp4: "audio/mp4", webm: "audio/webm",
-        wav: "audio/wav", mp3: "audio/mpeg", caf: "audio/x-caf",
-        ogg: "audio/ogg",
+        m4a: "audio/mp4", mp4: "audio/mp4", webm: "audio/webm",
+        wav: "audio/wav", mp3: "audio/mpeg", caf: "audio/mp4", ogg: "audio/ogg",
       };
-      const mimeType = mimeMap[ext] || "audio/m4a";
+      const mimeType = mimeMap[ext] || "audio/mp4";
 
-      const file = await toFile(audioBuffer, `audio.${ext}`, { type: mimeType });
+      const rawTranscript = await geminiTranscribeAudio(audio, mimeType, language);
 
-      const transcriptionResponse = await getOpenAI().audio.transcriptions.create({
-        file,
-        model: "whisper-1",
-        ...(language !== "en" ? { language } : {}),
-      });
+      const analysisPrompt = buildAnalysisPrompt(rawTranscript, langName, includeActionItems);
+      const content = await geminiGenerateContent(analysisPrompt, "You are an expert meeting and lecture notes assistant. Return only valid JSON.");
 
-      const rawTranscript = transcriptionResponse.text;
-
-      const systemPrompt = `You are an expert meeting and lecture notes assistant.
-CRITICAL: You MUST write ALL output text in ${langName}. Every field — title, summary bullets, action items, speaker names, transcript text, and key topics — must be written in ${langName}. Do not use any other language.
-
-Analyze the provided transcript and return a JSON object with EXACTLY this structure:
-{
-  "title": "A concise, descriptive title in ${langName} (max 60 chars)",
-  "summary": ["bullet point in ${langName}", "bullet point in ${langName}", ...],
-  "actionItems": [
-    { "speaker": "Speaker label in ${langName}", "task": "action item in ${langName}" },
-    ...
-  ],
-  "speakers": ["Speaker 1", "Speaker 2", ...],
-  "transcript": [
-    { "speaker": "Speaker 1", "timestamp": "0:00", "text": "paragraph summarizing this section in ${langName}" },
-    ...
-  ],
-  "keyTopics": ["topic in ${langName}", ...]
-}
-
-TRANSCRIPT RULES — paraphrase each speaker turn, do NOT reproduce verbatim and do NOT summarize:
-- Create one entry per distinct speaker turn or natural conversational exchange
-- Each "text" is 1–2 sentences paraphrasing what that speaker said, in conversational language (not bullet points)
-- Show the actual back-and-forth rhythm — if two people alternate frequently, that should be reflected
-- For a single-speaker lecture: one entry per topic shift (roughly every 1–2 minutes)
-- Timestamps should reflect when each turn actually occurred
-- Assign speaker labels based on role or vocal changes; single lecturer = "Speaker 1"
-- The transcript should read like a dialogue/conversation, clearly different from the summary bullets
-
-KEY TOPICS: Include at most 5 of the most important topics.
-${!includeActionItems ? 'ACTION ITEMS: Return an empty array [] for actionItems.' : 'ACTION ITEMS: Extract concrete next steps with the most likely responsible speaker.'}
-Return ONLY valid JSON with no markdown or code fences.`;
-
-      const analysisResponse = await getOpenAI().chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `Transcript:\n${rawTranscript}` },
-        ],
-        max_tokens: 16384,
-      });
-
-      const content = analysisResponse.choices[0]?.message?.content || "{}";
       let parsed: any = {};
-      try {
-        parsed = JSON.parse(content);
-      } catch {
+      try { parsed = JSON.parse(cleanJson(content)); } catch {
         parsed = {
-          title: "Recording",
-          summary: [rawTranscript.slice(0, 200)],
-          actionItems: [],
-          speakers: ["Speaker 1"],
-          transcript: [{ speaker: "Speaker 1", timestamp: "0:00", text: rawTranscript }],
-          keyTopics: [],
+          title: "Recording", summary: [rawTranscript.slice(0, 200)],
+          actionItems: [], speakers: ["Speaker 1"],
+          transcript: [{ speaker: "Speaker 1", timestamp: "0:00", text: rawTranscript }], keyTopics: [],
         };
       }
-
       res.json({ rawTranscript, ...parsed });
     } catch (error: any) {
       console.error("Transcription error:", error);
@@ -117,100 +112,45 @@ Return ONLY valid JSON with no markdown or code fences.`;
     }
   });
 
-  // Transcribe a single audio chunk → returns only rawTranscript (no GPT-4o analysis)
-  // Used for long recordings split into ≤90-min segments
+  // Transcribe a single audio chunk → returns only rawTranscript
   app.post("/api/transcribe-chunk", async (req, res) => {
     try {
       const { audio, filename = "recording.m4a", language = "en" } = req.body;
       if (!audio) return res.status(400).json({ error: "Audio data required" });
 
-      const audioBuffer = Buffer.from(audio, "base64");
       const ext = filename.split(".").pop()?.toLowerCase() || "m4a";
       const mimeMap: Record<string, string> = {
-        m4a: "audio/m4a", mp4: "audio/mp4", webm: "audio/webm",
-        wav: "audio/wav", mp3: "audio/mpeg", caf: "audio/x-caf", ogg: "audio/ogg",
+        m4a: "audio/mp4", mp4: "audio/mp4", webm: "audio/webm",
+        wav: "audio/wav", mp3: "audio/mpeg", caf: "audio/mp4", ogg: "audio/ogg",
       };
-      const mimeType = mimeMap[ext] || "audio/m4a";
-      const file = await toFile(audioBuffer, `audio.${ext}`, { type: mimeType });
+      const mimeType = mimeMap[ext] || "audio/mp4";
 
-      const transcriptionResponse = await getOpenAI().audio.transcriptions.create({
-        file,
-        model: "whisper-1",
-        ...(language !== "en" ? { language } : {}),
-      });
-
-      res.json({ rawTranscript: transcriptionResponse.text });
+      const rawTranscript = await geminiTranscribeAudio(audio, mimeType, language);
+      res.json({ rawTranscript });
     } catch (error: any) {
       console.error("Chunk transcription error:", error);
       res.status(500).json({ error: error.message || "Transcription failed" });
     }
   });
 
-  // Analyze a combined raw transcript → returns structured notes (title, summary, etc.)
-  // Called once after all chunks have been transcribed and joined
+  // Analyze a combined raw transcript → returns structured notes
   app.post("/api/analyze", express.json({ limit: "2mb" }), async (req, res) => {
     try {
       const { rawTranscript, language = "en", includeActionItems = true } = req.body;
       if (!rawTranscript) return res.status(400).json({ error: "rawTranscript is required" });
 
       const langName = LANGUAGE_NAMES[language] || "English";
+      const analysisPrompt = buildAnalysisPrompt(rawTranscript, langName, includeActionItems);
+      const content = await geminiGenerateContent(analysisPrompt, "You are an expert meeting and lecture notes assistant. Return only valid JSON.");
 
-      const systemPrompt = `You are an expert meeting and lecture notes assistant.
-CRITICAL: You MUST write ALL output text in ${langName}. Every field — title, summary bullets, action items, speaker names, transcript text, and key topics — must be written in ${langName}. Do not use any other language.
-
-Analyze the provided transcript and return a JSON object with EXACTLY this structure:
-{
-  "title": "A concise, descriptive title in ${langName} (max 60 chars)",
-  "summary": ["bullet point in ${langName}", "bullet point in ${langName}", ...],
-  "actionItems": [
-    { "speaker": "Speaker label in ${langName}", "task": "action item in ${langName}" },
-    ...
-  ],
-  "speakers": ["Speaker 1", "Speaker 2", ...],
-  "transcript": [
-    { "speaker": "Speaker 1", "timestamp": "0:00", "text": "paragraph summarizing this section in ${langName}" },
-    ...
-  ],
-  "keyTopics": ["topic in ${langName}", ...]
-}
-
-TRANSCRIPT RULES — paraphrase each speaker turn, do NOT reproduce verbatim and do NOT summarize:
-- Create one entry per distinct speaker turn or natural conversational exchange
-- Each "text" is 1–2 sentences paraphrasing what that speaker said, in conversational language (not bullet points)
-- Show the actual back-and-forth rhythm — if two people alternate frequently, that should be reflected
-- For a single-speaker lecture: one entry per topic shift (roughly every 1–2 minutes)
-- Timestamps should reflect when each turn actually occurred
-- Assign speaker labels based on role or vocal changes; single lecturer = "Speaker 1"
-- The transcript should read like a dialogue/conversation, clearly different from the summary bullets
-
-KEY TOPICS: Include at most 5 of the most important topics.
-${!includeActionItems ? 'ACTION ITEMS: Return an empty array [] for actionItems.' : 'ACTION ITEMS: Extract concrete next steps with the most likely responsible speaker.'}
-Return ONLY valid JSON with no markdown or code fences.`;
-
-      const analysisResponse = await getOpenAI().chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `Transcript:\n${rawTranscript}` },
-        ],
-        max_tokens: 16384,
-      });
-
-      const content = analysisResponse.choices[0]?.message?.content || "{}";
       let parsed: any = {};
-      try {
-        parsed = JSON.parse(content);
-      } catch {
+      try { parsed = JSON.parse(cleanJson(content)); } catch {
         parsed = {
-          title: "Lecture",
-          summary: [rawTranscript.slice(0, 200)],
-          actionItems: [],
-          speakers: ["Speaker 1"],
-          transcript: [{ speaker: "Speaker 1", timestamp: "0:00", text: rawTranscript }],
-          keyTopics: [],
+          title: "Lecture", summary: [rawTranscript.slice(0, 200)],
+          actionItems: [], speakers: ["Speaker 1"],
+          transcript: [{ speaker: "Speaker 1", timestamp: "0:00", text: rawTranscript }], keyTopics: [],
         };
       }
-
       res.json(parsed);
     } catch (error: any) {
       console.error("Analysis error:", error);
@@ -228,38 +168,29 @@ Return ONLY valid JSON with no markdown or code fences.`;
       res.setHeader("X-Accel-Buffering", "no");
       res.flushHeaders();
 
-      const systemMessage = context
-        ? `You are an AI assistant helping a user understand their lecture. You MUST respond in ${langName} only.
-
-Lecture context:
-${context}
-
-Answer questions specifically about this content. Be helpful, concise, and accurate. Always respond in ${langName}.
-
-FORMATTING RULES — follow these exactly:
-- Use plain text only. No markdown whatsoever.
-- Never use hashtags (#, ##, ###), asterisks (* or **), underscores (_ or __), backticks, or any other markdown symbols.
-- For bullet points use a simple dash: -
-- For numbered lists use: 1. 2. 3.
-- Write math and numbers in plain readable language. Write "half" not "1/2", "squared" not "^2", "the total is 45" not "= 45", "about 3.14" not "pi equals 3.14159...".
-- No LaTeX or equation notation of any kind.
-- Keep responses conversational and easy to read aloud.`
+      const systemInstruction = context
+        ? `You are an AI assistant helping a user understand their lecture. You MUST respond in ${langName} only.\n\nLecture context:\n${context}\n\nAnswer questions specifically about this content. Be helpful, concise, and accurate. Always respond in ${langName}.\n\nFORMATTING RULES:\n- Use plain text only. No markdown whatsoever.\n- Never use hashtags, asterisks, underscores, or backticks.\n- For bullets use a dash: -\n- For numbered lists use: 1. 2. 3.\n- Write math in plain language (e.g. "half" not "1/2").\n- Keep responses conversational and easy to read aloud.`
         : `You are a helpful AI assistant. Always respond in ${langName}. Use plain text only — no markdown, no asterisks, no hashtags, no special formatting symbols.`;
 
-      const stream = await getOpenAI().chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          { role: "system", content: systemMessage },
-          ...messages,
-        ],
-        stream: true,
-        max_tokens: 2048,
+      const genAI = getGemini();
+      const model = genAI.getGenerativeModel({
+        model: "gemini-2.0-flash",
+        systemInstruction,
       });
 
-      for await (const chunk of stream) {
-        const content = chunk.choices[0]?.delta?.content || "";
-        if (content) {
-          res.write(`data: ${JSON.stringify({ content })}\n\n`);
+      const history = messages.slice(0, -1).map((m: any) => ({
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [{ text: m.content }],
+      }));
+      const lastMessage = messages[messages.length - 1];
+
+      const chat = model.startChat({ history });
+      const streamResult = await chat.sendMessageStream(lastMessage?.content || "");
+
+      for await (const chunk of streamResult.stream) {
+        const text = chunk.text();
+        if (text) {
+          res.write(`data: ${JSON.stringify({ content: text })}\n\n`);
         }
       }
 
