@@ -9,7 +9,7 @@
       "distribution": "internal",
       "node": "20.18.0",
       "env": {
-        "EXPO_PUBLIC_DOMAIN": "lectoai.replit.app",
+        "EXPO_PUBLIC_DOMAIN": "lecto-1.replit.app",
         "EXPO_PUBLIC_REVENUECAT_API_KEY": "appl_MgzdgWSVpKwgtQNgdqrRvNTmerh"
       }
     },
@@ -17,7 +17,7 @@
       "distribution": "internal",
       "node": "20.18.0",
       "env": {
-        "EXPO_PUBLIC_DOMAIN": "lectoai.replit.app",
+        "EXPO_PUBLIC_DOMAIN": "lecto-1.replit.app",
         "EXPO_PUBLIC_REVENUECAT_API_KEY": "appl_MgzdgWSVpKwgtQNgdqrRvNTmerh"
       }
     },
@@ -25,7 +25,7 @@
       "autoIncrement": true,
       "node": "20.18.0",
       "env": {
-        "EXPO_PUBLIC_DOMAIN": "lectoai.replit.app",
+        "EXPO_PUBLIC_DOMAIN": "lecto-1.replit.app",
         "EXPO_PUBLIC_REVENUECAT_API_KEY": "appl_MgzdgWSVpKwgtQNgdqrRvNTmerh"
       }
     }
