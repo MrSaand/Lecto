@@ -5,7 +5,7 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
  * Gets the base URL for the Express API server (e.g., "http://localhost:3000")
  * @returns {string} The API base URL
  */
-const PRODUCTION_DOMAIN = "lectoai.replit.app";
+const PRODUCTION_DOMAIN = "lecto-1.replit.app";
 
 export function getApiUrl(): string {
   const host = process.env.EXPO_PUBLIC_DOMAIN || PRODUCTION_DOMAIN;
