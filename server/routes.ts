@@ -14,7 +14,7 @@ function getGemini() {
 async function geminiGenerateContent(prompt: string, systemInstruction?: string): Promise<string> {
   const genAI = getGemini();
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.0-flash",
+    model: "gemini-2.5-flash",
     ...(systemInstruction ? { systemInstruction } : {}),
   });
   const result = await model.generateContent(prompt);
@@ -23,7 +23,7 @@ async function geminiGenerateContent(prompt: string, systemInstruction?: string)
 
 async function geminiTranscribeAudio(audioBase64: string, mimeType: string, language: string): Promise<string> {
   const genAI = getGemini();
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
   const langHint = language !== "en" ? ` The audio is in ${LANGUAGE_NAMES[language] || language}.` : "";
   const result = await model.generateContent([
     {
@@ -174,7 +174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const genAI = getGemini();
       const model = genAI.getGenerativeModel({
-        model: "gemini-2.0-flash",
+        model: "gemini-2.5-flash",
         systemInstruction,
       });
 
